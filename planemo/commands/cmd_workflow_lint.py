@@ -15,7 +15,7 @@ from planemo.workflow_lint import lint_workflow_artifacts_on_paths
 @options.skip_option()
 @command_function
 def cli(ctx, paths, **kwds):
-    """Check workflows for common errors and best practices."""
+    """Check workflows for syntax errors and best practices."""
     # Unlike tools, lets just make this recursive by default.
     lint_args = build_lint_args(ctx, **kwds)
     exit_code = lint_workflow_artifacts_on_paths(
