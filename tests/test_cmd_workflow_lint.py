@@ -11,7 +11,7 @@ from .test_utils import (
 class CmdWorkflowLintTestCase(CliTestCase):
 
     def test_gxformat2_examples_as_repos(self):
-        repos = glob.glob(_wf_repo("from_gxformat2") + "/*")
+        repos = glob.glob(_wf_repo("from_format2") + "/*")
         for repo in repos:
             repo_basename = os.path.basename(repo)
             try:
@@ -21,6 +21,17 @@ class CmdWorkflowLintTestCase(CliTestCase):
                 continue
             lint_cmd = ["workflow_lint", "--skip", "tests", repo]
             self._check_exit_code(lint_cmd, exit_code=expected_exit_code)
+
+    def test_fail_level():
+        # ensure missing tests normally cause it to fail...
+        _wf_repo("from_gxformat2/0_basic_format2")
+        lint_cmd = ["workflow_lint", repo]
+        self._check_exit_code(lint_cmd, exit_code=1)
+
+        # ... but not if fail_level is error
+        _wf_repo("from_gxformat2/0_basic_format2")
+        lint_cmd = ["workflow_lint", "--fail_level", "error", repo]
+        self._check_exit_code(lint_cmd, exit_code=1)
 
     def test_workflow_test_linting(self):
         repo = _wf_repo("basic_format2_ok")

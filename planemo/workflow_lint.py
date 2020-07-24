@@ -33,22 +33,25 @@ def generate_dockstore_yaml(directory):
     return contents
 
 
-def lint_workflow_artifacts_on_paths(ctx, paths, lint_args, **kwds):
-    lint_context = WorkflowLintContext()
+def lint_workflow_artifacts_on_paths(ctx, paths, lint_args):
+    report_level = lint_args["level"]
+    lint_context = WorkflowLintContext(report_level)
     for path in paths:
-        _lint_workflow_artifacts_on_path(lint_context, path, lint_args, **kwds)
+        _lint_workflow_artifacts_on_path(lint_context, path, lint_args)
 
     lint_context.print_messages()
-    if lint_context.found_errors or lint_context.found_warns:
+    if lint_context.found_errors:
+        return EXIT_CODE_GENERIC_FAILURE
+    elif lint_context.found_warns and lint_args["fail_level"] == "warn":
         return EXIT_CODE_GENERIC_FAILURE
     else:
         return EXIT_CODE_OK
 
 
-def _lint_workflow_artifacts_on_path(lint_context, path, lint_args, **kwds):
+def _lint_workflow_artifacts_on_path(lint_context, path, lint_args):
     for potential_workflow_artifact_path in find_potential_workflow_files(path):
         if os.path.basename(potential_workflow_artifact_path) == DOCKSTORE_REGISTRY_CONF:
-            _lint_dockstore_config(lint_context, potential_workflow_artifact_path, **kwds)
+            _lint_dockstore_config(lint_context, potential_workflow_artifact_path, lint_args)
 
         elif looks_like_a_workflow(potential_workflow_artifact_path):
             with open(potential_workflow_artifact_path, "r") as f:
@@ -58,7 +61,7 @@ def _lint_workflow_artifacts_on_path(lint_context, path, lint_args, **kwds):
             lint_func(lint_context, workflow_dict, path=potential_workflow_artifact_path)
 
             # Lint tests...
-            skip_tests = "tests" in (kwds.get("skip") or "")
+            skip_tests = "tests" in lint_args.get("skip_types")
             if not skip_tests:
                 runnable = for_path(potential_workflow_artifact_path)
                 test_cases = cases(runnable)
@@ -87,8 +90,8 @@ def _lint_workflow_artifacts_on_path(lint_context, path, lint_args, **kwds):
         # Allow linting ro crates and such also
 
 
-def _lint_dockstore_config(lint_context, path, **kwds):
-    skip_dockstore = "dockstore" in (kwds.get("skip") or "")
+def _lint_dockstore_config(lint_context, path, lint_args):
+    skip_dockstore = "dockstore" in lint_args.get("skip_types")
     if skip_dockstore:
         return
 

@@ -22,6 +22,5 @@ def cli(ctx, paths, **kwds):
         ctx,
         paths,
         lint_args,
-        **kwds
     )
     ctx.exit(exit_code)
