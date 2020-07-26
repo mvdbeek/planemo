@@ -383,6 +383,9 @@ class ExternalGalaxyToolTestCase(AbstractTestCase):
         """Just return the structured_test_data generated from galaxy-tool-util for this test variant."""
         return run_response
 
+    def summarize_invocation(self, run_reponse):
+        invocation_id = '46d91b7469c22df6'
+
 
 def _tests_path(runnable):
     if not runnable.is_single_artifact:
