@@ -40,11 +40,11 @@ def test_can_handle():
     for engine_type in ["galaxy", "cwltool"]:
         with engine_context(ctx, engine=engine_type) as e:
             for key, value in CAN_HANDLE[engine_type].items():
-                assert bool(e.can_run(for_path(key))) is value
+                assert bool(e.can_run(for_path(key)[0])) is value
 
 
 def test_outputs():
-    outputs = get_outputs(for_path(A_CWL_WORKFLOW))
+    outputs = get_outputs(for_path(A_CWL_WORKFLOW)[0])
     assert len(outputs) == 1
     output_id = outputs[0].get_id()
     assert output_id == "count_output"

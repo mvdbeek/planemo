@@ -655,7 +655,7 @@ def format_wf_steps(wf, gi):
 def get_hands_on_boxes_from_local_galaxy(kwds, wf_filepath, ctx):
     """Server local Galaxy and get the workflow dictionary."""
     assert is_galaxy_engine(**kwds)
-    runnable = for_path(wf_filepath)
+    runnable = for_path(wf_filepath)[0]
     tuto_body = ''
     with engine_context(ctx, **kwds) as galaxy_engine:
         with galaxy_engine.ensure_runnables_served([runnable]) as config:

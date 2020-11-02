@@ -41,11 +41,19 @@ def cli(ctx, runnable_identifier, job_path, **kwds):
             kwds["engine"] = "external_galaxy"
         else:
             kwds["engine"] = "galaxy"
+
+    run_results = []
+    # TODO: merge run results, however they may look like
+
     with engine_context(ctx, **kwds) as engine:
-        run_result = engine.run(runnable, job_path)
-    if not run_result.was_successful:
-        warn("Run failed [%s]" % unicodify(run_result))
-        ctx.exit(1)
+        for run_result in engine.run(runnable, job_path):
+            run_results.append(run_result)
+
+    for run_result in run_results:
+        if not run_result.was_successful:
+            warn("Run failed [%s]" % unicodify(run_result))
+            ctx.exit(1)
+
     outputs_dict = run_result.outputs_dict
     output_json = kwds.get("output_json", None)
     if output_json:

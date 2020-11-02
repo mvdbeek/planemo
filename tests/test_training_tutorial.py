@@ -25,7 +25,7 @@ from .test_training import (
     CTX,
     datatype_fp,
     KWDS,
-    RUNNABLE,
+    RUNNABLES,
     tuto_fp,
     wf,
     WF_FP,
@@ -120,7 +120,7 @@ def test_get_hands_on_boxes_from_running_galaxy():
     assert is_galaxy_engine(**KWDS)
     galaxy_url = 'http://%s:%s' % (KWDS['host'], KWDS['port'])
     with engine_context(CTX, **KWDS) as galaxy_engine:
-        with galaxy_engine.ensure_runnables_served([RUNNABLE]) as config:
+        with galaxy_engine.ensure_runnables_served(RUNNABLES) as config:
             wf_id = config.workflow_id(WF_FP)
             tuto_body = get_hands_on_boxes_from_running_galaxy(wf_id, galaxy_url, config.user_api_key)
 
@@ -306,7 +306,7 @@ def test_tutorial_export_workflow_file():
     assert is_galaxy_engine(**KWDS)
     galaxy_url = 'http://%s:%s' % (KWDS['host'], KWDS['port'])
     with engine_context(CTX, **KWDS) as galaxy_engine:
-        with galaxy_engine.ensure_runnables_served([RUNNABLE]) as config:
+        with galaxy_engine.ensure_runnables_served(RUNNABLES) as config:
             tuto.init_wf_id = config.workflow_id(WF_FP)
             tuto.training.galaxy_url = galaxy_url
             tuto.training.galaxy_api_key = config.user_api_key
@@ -396,7 +396,7 @@ def test_tutorial_create_hands_on_tutorial():
     # with init_wf_id
     assert is_galaxy_engine(**KWDS)
     with engine_context(CTX, **KWDS) as galaxy_engine:
-        with galaxy_engine.ensure_runnables_served([RUNNABLE]) as config:
+        with galaxy_engine.ensure_runnables_served(RUNNABLES) as config:
             tuto.init_wf_id = config.workflow_id(WF_FP)
             tuto.training.galaxy_api_key = config.user_api_key
             tuto.create_hands_on_tutorial(CTX)

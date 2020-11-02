@@ -76,19 +76,19 @@ def _lint_workflow_artifacts_on_path(lint_context, path, lint_args):
 
 # misspell for pytest
 def _lint_tsts(path, lint_context):
-    runnable = for_path(path)
-    test_cases = cases(runnable)
-    all_tests_valid = False
-    if len(test_cases) == 0:
-        lint_context.warn("Workflow missing test cases.")
-    else:
-        all_tests_valid = True
-    for test_case in test_cases:
-        if not _lint_case(path, test_case, lint_context):
-            all_tests_valid = False
+    for runnable in for_path(path):
+        test_cases = cases(runnable)
+        all_tests_valid = False
+        if len(test_cases) == 0:
+            lint_context.warn("Workflow missing test cases.")
+        else:
+            all_tests_valid = True
+        for test_case in test_cases:
+            if not _lint_case(path, test_case, lint_context):
+                all_tests_valid = False
 
-    if all_tests_valid:
-        lint_context.valid("Tests appear structurally correct")
+        if all_tests_valid:
+            lint_context.valid("Tests appear structurally correct")
 
 
 def _lint_case(path, test_case, lint_context):
