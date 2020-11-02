@@ -6,6 +6,7 @@ import abc
 import os
 from distutils.dir_util import copy_tree
 from enum import auto, Enum
+from pathlib import Path
 from typing import NamedTuple
 from urllib.parse import urlparse
 
@@ -27,6 +28,7 @@ from six import (
 from planemo.exit_codes import EXIT_CODE_UNKNOWN_FILE_TYPE, ExitCodeException
 from planemo.galaxy.workflows import describe_outputs, GALAXY_WORKFLOWS_PREFIX
 from planemo.io import error
+from planemo.shed import DOCKSTORE_REGISTRY_CONF
 from planemo.test import check_output, for_collections
 
 TEST_SUFFIXES = [
@@ -159,10 +161,26 @@ def _copy_runnable_tree(path, runnable_type, temp_path):
     return path
 
 
+def workflows_from_dockstore_yaml(path):
+    workflows = []
+    parent_dir = Path(path).absolute().parent
+    with open(path) as y:
+        for workflow in yaml.safe_load(y).get('workflows', []):
+            workflow_path = workflow.get('primaryDescriptorPath')
+            if workflow_path:
+                if workflow_path.startswith('/'):
+                    workflow_path = workflow_path[1:]
+            workflows.append(parent_dir.joinpath(workflow_path))
+    return workflows
+
+
 def for_path(path, temp_path=None):
     """Produce a class:`Runnable` for supplied path."""
     runnable_type = None
     if os.path.isdir(path):
+        dockstore_path = os.path.join(path, DOCKSTORE_REGISTRY_CONF)
+        if os.path.exists(dockstore_path):
+            return [Runnable(str(path), RunnableType.galaxy_workflow) for path in workflows_from_dockstore_yaml(dockstore_path)]
         runnable_type = RunnableType.directory
     elif looks_like_a_tool_cwl(path):
         runnable_type = RunnableType.cwl_tool
@@ -193,12 +211,15 @@ def for_path(path, temp_path=None):
     if temp_path:
         path = _copy_runnable_tree(path, runnable_type, temp_path)
 
-    return Runnable(path, runnable_type)
+    return [Runnable(path, runnable_type)]
 
 
 def for_paths(paths, temp_path=None):
     """Return a specialized list of Runnable objects for paths."""
-    return [for_path(path, temp_path=temp_path) for path in paths]
+    r = []
+    for path in paths:
+        r.extend(for_path(path, temp_path=temp_path))
+    return r
 
 
 def for_uri(uri):
