@@ -11,7 +11,7 @@ from .test_utils import TEST_DATA_DIR
 def test_non_file_case_checker():
     """Verify simply usage of :func:`planemo.runnable.TestCase.check`."""
     int_tool_path = os.path.join(TEST_DATA_DIR, "int_tool.cwl")
-    test_cases = cases(for_path(int_tool_path))
+    test_cases = cases(for_path(int_tool_path)[0])
     assert len(test_cases) == 1
     test_case = test_cases[0]
     outputs_dict = {
@@ -31,7 +31,7 @@ def test_non_file_case_checker():
 def test_file_case_checker():
     hello_txt_path = os.path.join(TEST_DATA_DIR, "hello.txt")
     int_tool_path = os.path.join(TEST_DATA_DIR, "cat_tool.cwl")
-    test_cases = cases(for_path(int_tool_path))
+    test_cases = cases(for_path(int_tool_path)[0])
     assert len(test_cases) == 1
     test_case = test_cases[0]
     outputs_dict = {

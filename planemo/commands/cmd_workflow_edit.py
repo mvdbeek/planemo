@@ -24,9 +24,9 @@ def cli(ctx, workflow_path, output=None, force=False, **kwds):
 
     kwds["workflows_from_path"] = True
 
-    runnable = for_path(workflow_path)
+    runnables = for_path(workflow_path)
     with engine_context(ctx, **kwds) as galaxy_engine:
-        with galaxy_engine.ensure_runnables_served([runnable]) as config:
+        with galaxy_engine.ensure_runnables_served(runnables) as config:
             workflow_id = config.workflow_id(workflow_path)
             url = "%s/workflow/editor?id=%s" % (config.galaxy_url, workflow_id)
             click.launch(url)

@@ -42,15 +42,19 @@ def cli(ctx, uri, job_path, **kwds):
         else:
             kwds["engine"] = "galaxy"
 
-    with engine_context(ctx, **kwds) as engine:
-        run_result = engine.run(path, job_path)
+    run_results = []
+    # TODO: merge run results, however they may look like
 
-    if not run_result.was_successful:
-        warn("Run failed [%s]" % unicodify(run_result))
-        ctx.exit(1)
+    with engine_context(ctx, **kwds) as engine:
+        for run_result in engine.run(path, job_path):
+            run_results.append(run_result)
+
+    for run_result in run_results:
+        if not run_result.was_successful:
+            warn("Run failed [%s]" % unicodify(run_result))
+            ctx.exit(1)
 
     outputs_dict = run_result.outputs_dict
-    print(outputs_dict)
     output_json = kwds.get("output_json", None)
     if output_json:
         with open(output_json, "w") as f:

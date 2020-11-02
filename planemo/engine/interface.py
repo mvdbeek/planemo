@@ -55,10 +55,9 @@ class BaseEngine(Engine):
 
     def run(self, path, job_path):
         """Run a job using a compatible artifact (workflow or tool)."""
-        runnable = for_path(path)
-        self._check_can_run(runnable)
-        run_response = self._run(runnable, job_path)
-        return run_response
+        for runnable in for_path(path):
+            self._check_can_run(runnable)
+            yield self._run(runnable, job_path)
 
     @abc.abstractmethod
     def _run(self, runnable, job_path):

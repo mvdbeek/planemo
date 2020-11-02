@@ -43,9 +43,9 @@ def cli(ctx, workflow_path, output=None, force=False, **kwds):
         if output is None:
             output = os.path.splitext(workflow_path)[0] + ".ga"
 
-        runnable = for_path(workflow_path)
+        runnables = for_path(workflow_path)
         with engine_context(ctx, **kwds) as galaxy_engine:
-            with galaxy_engine.ensure_runnables_served([runnable]) as config:
+            with galaxy_engine.ensure_runnables_served(runnables) as config:
                 workflow_id = config.workflow_id(workflow_path)
                 output_dict = config.gi.workflows.export_workflow_dict(workflow_id)
 

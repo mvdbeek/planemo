@@ -32,7 +32,7 @@ class GalaxyServeTestCase(CliTestCase):
         cat_path = os.path.join(TEST_REPOS_DIR, "single_tool", "cat.xml")
         config = galaxy_serve(
             self.test_context,
-            [for_path(cat_path)],
+            for_path(cat_path),
             install_galaxy=True,
             galaxy_branch=target_galaxy_branch(),
             port=port,
@@ -55,7 +55,7 @@ class GalaxyServeTestCase(CliTestCase):
         extra_tools = [random_lines, cat]
         config = galaxy_serve(
             self.test_context,
-            [for_path(workflow)],
+            for_path(workflow),
             install_galaxy=True,
             galaxy_branch=target_galaxy_branch(),
             port=port,
