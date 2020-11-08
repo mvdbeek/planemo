@@ -30,6 +30,9 @@ class StructuredData(object):
         try:
             structured_data = data
             structured_data_tests = structured_data["tests"]
+            for test in structured_data_tests:
+                if 'data' not in test:
+                    test['data'] = test
         except Exception:
             data_error()
 

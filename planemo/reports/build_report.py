@@ -70,7 +70,7 @@ def __inject_summary(environment):
                 errors += 1
             elif status == 'failure':
                 failures += 1
-            elif status == 'skipped':
+            elif status.startswith('skip'):
                 skips += 1
     environment['raw_data']['results'] = {
         'total': total,
