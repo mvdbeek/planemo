@@ -12,7 +12,6 @@ from planemo.exit_codes import EXIT_CODE_UNSUPPORTED_FILE_TYPE
 from planemo.io import error
 from planemo.runnable import (
     cases,
-    for_path,
     RunnableType,
 )
 from planemo.test.results import StructuredData
@@ -53,8 +52,9 @@ class BaseEngine(Engine):
     def cleanup(self):
         """Default no-op cleanup method."""
 
-    def run(self, path, job_path):
+    def run(self, runnable, job_path):
         """Run a job using a compatible artifact (workflow or tool)."""
+        # TODO where is path comining from?
         for runnable in for_path(path):
             self._check_can_run(runnable)
             yield self._run(runnable, job_path)

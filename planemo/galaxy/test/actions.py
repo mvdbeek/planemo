@@ -18,7 +18,10 @@ from planemo.galaxy.run import (
     setup_venv,
 )
 from planemo.io import error, info, shell_join, warn
-from planemo.reports import build_report
+from planemo.reports import (
+    allure,
+    build_report,
+)
 from planemo.test.results import get_dict_value
 from . import structures as test_structures
 
@@ -127,13 +130,15 @@ def run_in_config(ctx, config, run=run_galaxy_command, test_data_target_dir=None
     )
 
 
-def handle_reports_and_summary(ctx, structured_data, exit_code=None, kwds={}):
+def handle_reports_and_summary(ctx, structured_data, exit_code=None, kwds=None):
     """Produce reports and print summary, return 0 if tests passed.
 
     If ``exit_code`` is set - use underlying test source for return
     code and test success determination, otherwise infer from supplied
     test data.
     """
+    if kwds is None:
+        kwds = {}
     handle_reports(ctx, structured_data, kwds)
     summary_exit_code = _handle_summary(
         structured_data,
@@ -167,7 +172,7 @@ def handle_reports(ctx, structured_data, kwds):
         except Exception as e:
             exceptions.append(e)
 
-    for report_type in ["html", "markdown", "text", "xunit", "junit"]:
+    for report_type in ["html", "markdown", "text", "xunit", "junit", "allure"]:
         try:
             _handle_test_output_file(
                 ctx, report_type, structured_data, kwds
@@ -188,6 +193,11 @@ def _handle_test_output_file(ctx, report_type, test_data, kwds):
     if path is None:
         message = "No file specified for %s, skipping test output." % kwd_name
         ctx.vlog(message)
+        return
+
+    if report_type == "allure":
+        file_modication_datatime = kwds.get("file_modication_datatime")
+        allure.write_results(path, test_data, file_modication_datatime=file_modication_datatime)
         return
 
     try:

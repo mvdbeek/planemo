@@ -176,6 +176,14 @@ planemo.runnable module
    :undoc-members:
    :show-inheritance:
 
+planemo.runnable\_resolve module
+--------------------------------
+
+.. automodule:: planemo.runnable_resolve
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 planemo.shed\_lint module
 -------------------------
 
@@ -231,7 +239,6 @@ planemo.workflow\_lint module
    :members:
    :undoc-members:
    :show-inheritance:
-
 
 Module contents
 ---------------
