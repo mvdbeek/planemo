@@ -43,7 +43,7 @@ def cli(ctx, workflow_identifier, output=None, force=False, **kwds):
         if output is None:
             output = os.path.splitext(workflow_identifier)[0] + ".ga"
 
-        runnable = for_path(workflow_identifier)[0]
+        runnable = for_path(workflow_identifier)
         with engine_context(ctx, **kwds) as galaxy_engine:
             with galaxy_engine.ensure_runnables_served([runnable]) as config:
                 workflow_id = config.workflow_id(workflow_identifier)

@@ -174,13 +174,17 @@ def workflows_from_dockstore_yaml(path):
     return workflows
 
 
-def for_path(path, temp_path=None):
+def for_path(path, temp_path=None, return_all=False):
     """Produce a class:`Runnable` for supplied path."""
     runnable_type = None
     if os.path.isdir(path):
         dockstore_path = os.path.join(path, DOCKSTORE_REGISTRY_CONF)
         if os.path.exists(dockstore_path):
-            return [Runnable(str(path), RunnableType.galaxy_workflow) for path in workflows_from_dockstore_yaml(dockstore_path)]
+            runnables = [Runnable(str(path), RunnableType.galaxy_workflow) for path in workflows_from_dockstore_yaml(dockstore_path)]
+            if return_all:
+                return runnables
+            else:
+                return runnables[0]
         runnable_type = RunnableType.directory
     elif looks_like_a_tool_cwl(path):
         runnable_type = RunnableType.cwl_tool
@@ -211,7 +215,7 @@ def for_path(path, temp_path=None):
     if temp_path:
         path = _copy_runnable_tree(path, runnable_type, temp_path)
 
-    return [Runnable(path, runnable_type)]
+    return Runnable(path, runnable_type)
 
 
 def for_paths(paths, temp_path=None):

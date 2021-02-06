@@ -4,6 +4,7 @@ import re
 import yaml
 from galaxy.tool_util.lint import LintContext
 from galaxy.tool_util.loader_directory import EXCLUDE_WALK_DIRS
+from galaxy.util import listify
 from gxformat2._yaml import ordered_load
 from gxformat2.lint import lint_format2, lint_ga
 
@@ -76,7 +77,7 @@ def _lint_workflow_artifacts_on_path(lint_context, path, lint_args):
 
 # misspell for pytest
 def _lint_tsts(path, lint_context):
-    for runnable in for_path(path):
+    for runnable in listify(for_path(path, return_all=True)):
         test_cases = cases(runnable)
         all_tests_valid = False
         if len(test_cases) == 0:
