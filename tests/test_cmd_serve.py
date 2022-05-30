@@ -35,10 +35,7 @@ class UsesServeCommand:
         serve_cmd = self._serve_command_list(serve_args, serve_cmd)
         if run_verbosely():
             print("Running command for test [%s]" % serve_cmd)
-        if not "--daemon" in serve_cmd:
-            self._run_subprocess(serve_cmd)
-        else:
-            self._check_exit_code(serve_cmd)
+        self._run_subprocess(serve_cmd)
 
     def _run_subprocess(self, serve_cmd):
         serve_cmd.insert(0, "planemo")
@@ -80,11 +77,9 @@ class UsesServeCommand:
         test_cmd.extend(serve_args)
         return test_cmd
 
-    def _launch_thread_and_wait(self, func, args=None, run_as_subprocess=False, **kwd):
+    def _launch_thread_and_wait(self, func, args=None, **kwd):
         args = args or []
-        future = launch_and_wait_for_galaxy(self._port, func, [args], run_as_subprocess=run_as_subprocess, **kwd)
-        if future:
-            self._cleanup_hooks.append(lambda: future.cancel())
+        launch_and_wait_for_galaxy(self._port, func, [args], run_as_subprocess=True, **kwd)
 
     @property
     def _user_gi(self):
@@ -125,7 +120,7 @@ class ServeTestCase(CliTestCase, UsesServeCommand):
         # Given the client build - give this more time.
         timeout_multiplier = 3
         self._launch_thread_and_wait(
-            self._run, extra_args, timeout_multiplier=timeout_multiplier, run_as_subprocess=True
+            self._run, extra_args, timeout_multiplier=timeout_multiplier,
         )
         # Check that the client was correctly built
         url = "http://localhost:%d/static/dist/analysis.bundled.js" % int(self._port)
