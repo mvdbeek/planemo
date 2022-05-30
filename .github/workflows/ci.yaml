@@ -19,22 +19,22 @@ jobs:
       matrix:
         python-version: ['3.7']
         tox-action:
-          # - lint
-          # - lint_docs
-          # - mypy
-          # - unit-quick
+          - lint
+          - lint_docs
+          - mypy
+          - unit-quick
           #- unit-diagnostic-servebasic
           #- unit-diagnostic-servebasic-gx-2005
           #- unit-diagnostic-servebasic-gx-master
-          # - unit-diagnostic-servebasic-gx-dev
+          - unit-diagnostic-servebasic-gx-dev
           #- unit-diagnostic-servetraining
           #- unit-diagnostic-servecmd
           #- unit-diagnostic-trainingwfcmd
-          # - unit-nonredundant-noclientbuild-noshed-gx-2105
-          # - unit-nonredundant-noclientbuild-noshed-gx-2109
+          - unit-nonredundant-noclientbuild-noshed-gx-2105
+          - unit-nonredundant-noclientbuild-noshed-gx-2109
           - unit-nonredundant-noclientbuild-noshed-gx-dev
-          # - unit-nonredundant-noclientbuild-noshed
-          # - unit-diagnostic-serveclientcmd
+          - unit-nonredundant-noclientbuild-noshed
+          - unit-diagnostic-serveclientcmd
     services:
       postgres:
         image: postgres:10.8
@@ -64,10 +64,6 @@ jobs:
       - name: Checkout system space
         run: |
           df
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: true
       - name: Test with tox
         run: |
           TOXENV=$(echo $TOXENV | sed 's/\.//') tox
