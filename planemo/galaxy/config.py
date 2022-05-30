@@ -441,6 +441,8 @@ def local_galaxy_config(ctx, runnables, for_tests=False, **kwds):
         _ensure_directory(shed_tool_path)
         port = _get_port(kwds)
         template_args = dict(
+            port=port,
+            host=kwds.get("host", "127.0.0.1"),
             server_name=server_name,
             temp_directory=config_directory,
             shed_tool_path=shed_tool_path,
@@ -521,24 +523,8 @@ def local_galaxy_config(ctx, runnables, for_tests=False, **kwds):
         # https://github.com/galaxyproject/planemo/issues/788
         env["GALAXY_LOG"] = log_file
         env["GALAXY_PID"] = pid_file
-        env["GRAVITY_STATE_DIR"] = config_join("gravity")
-        with NamedTemporaryFile(suffix=".sock", delete=True) as nt:
-            env["SUPERVISORD_SOCKET"] = nt.name
-        write_file(
-            config_join("galaxy.yml"),
-            json.dumps(
-                {
-                    "galaxy": {"job_config_file": kwds["job_config_file"]},
-                    "gravity": {
-                        "galaxy_root": galaxy_root,
-                        "gunicorn": {"bind": f"localhost:{port}"},
-                        "gx-it-proxy": {
-                            "enable": False,
-                        },
-                    },
-                }
-            ),
-        )
+        write_galaxy_config(galaxy_root=galaxy_root, env=env, kwds=kwds, template_args=template_args, config_join=config_join)
+
         _write_tool_conf(ctx, all_tool_paths, tool_conf)
         write_file(empty_tool_conf, EMPTY_TOOL_CONF_TEMPLATE)
 
@@ -559,6 +545,34 @@ def local_galaxy_config(ctx, runnables, for_tests=False, **kwds):
             runnables,
             galaxy_root,
             kwds,
+        )
+
+
+def write_galaxy_config(galaxy_root, env, kwds, template_args, config_join):
+    if get_galaxy_major_version(galaxy_root) < parse_version("22.01"):
+        # Legacy .ini setup
+        env["GALAXY_CONFIG_FILE"] = config_join("galaxy.ini")
+        web_config = _sub(WEB_SERVER_CONFIG_TEMPLATE, template_args)
+        write_file(env["GALAXY_CONFIG_FILE"], web_config)
+    else:
+        env["GALAXY_CONFIG_FILE"] = config_join("galaxy.yml")
+        env["GRAVITY_STATE_DIR"] = config_join("gravity")
+        with NamedTemporaryFile(suffix=".sock", delete=True) as nt:
+            env["SUPERVISORD_SOCKET"] = nt.name
+        write_file(
+            env["GALAXY_CONFIG_FILE"],
+            json.dumps(
+                {
+                    "galaxy": {"job_config_file": kwds["job_config_file"]},
+                    "gravity": {
+                        "galaxy_root": galaxy_root,
+                        "gunicorn": {"bind": f"localhost:{template_args['port']}"},
+                        "gx-it-proxy": {
+                            "enable": False,
+                        },
+                    },
+                }
+            ),
         )
 
 
@@ -1100,8 +1114,6 @@ class LocalGalaxyConfig(BaseManagedGalaxyConfig):
             self.env["GALAXY_RUN_ALL"] = "1"
         else:
             run_script += f" --server-name {shlex.quote(self.server_name)}"
-        galaxy_yml = os.path.join(self.config_directory, "galaxy.yml")
-        self.env["GALAXY_CONFIG_FILE"] = galaxy_yml
         cd_to_galaxy_command = ["cd", self.galaxy_root]
         return shell_join(
             cd_to_galaxy_command,
