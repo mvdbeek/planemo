@@ -16,6 +16,7 @@ from planemo.galaxy.activity import (
     execute,
     execute_rerun,
     GalaxyBaseRunResponse,
+    PlanemoStagingInterface,
 )
 from planemo.galaxy.config import external_galaxy_config
 from planemo.galaxy.serve import serve_daemon
@@ -99,6 +100,12 @@ class GalaxyEngine(BaseEngine, metaclass=abc.ABCMeta):
                     test_index = test_case.test_index
                     tool_version = test_case.tool_version
                     galaxy_interactor = interactor.GalaxyInteractorApi(**galaxy_interactor_kwds)
+                    staging_interface = PlanemoStagingInterface(
+                        ctx=self._ctx,
+                        user_gi=config.user_gi,
+                        version_major=str(galaxy_interactor.target_galaxy_version),
+                        simultaneous_uploads=False,
+                    )
 
                     def _register_job_data(job_data):
                         test_results.append(
@@ -124,6 +131,7 @@ class GalaxyEngine(BaseEngine, metaclass=abc.ABCMeta):
                             register_job_data=_register_job_data,
                             maxseconds=test_timeout,
                             quiet=not verbose,
+                            staging_interface=staging_interface,
                         )
                     except Exception:
                         pass

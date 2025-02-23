@@ -107,14 +107,12 @@ class PlanemoStagingInterface(StagingInterface):
     def __init__(
         self,
         ctx: "PlanemoCliContext",
-        runnable: Runnable,
         user_gi: GalaxyInstance,
         version_major: str,
         simultaneous_uploads: bool,
     ) -> None:
         self._ctx = ctx
         self._user_gi = user_gi
-        self._runnable = runnable
         self._version_major = version_major
         self._simultaneous_uploads = simultaneous_uploads
 
@@ -140,7 +138,7 @@ class PlanemoStagingInterface(StagingInterface):
     @property
     def use_fetch_api(self):
         # hack around this not working for galaxy_tools - why is that :(
-        return self._runnable.type != RunnableType.galaxy_tool and self._version_major >= "20.09"
+        return self._version_major >= "20.09"
 
     # extension point for planemo to override logging
     def _log(self, message):
@@ -279,7 +277,7 @@ def invocation_to_run_response(
 
 
 def stage_in(
-    ctx: "PlanemoCliContext", runnable: Runnable, config: "BaseGalaxyConfig", job_path: str, **kwds
+    ctx: "PlanemoCliContext", runnable: Runnable, config: "BaseGalaxyConfig", job_path: str, test_data: Optional[str], **kwds
 ) -> Tuple[Dict[str, Any], str]:
     # only upload objects as files/collections for CWL workflows...
     tool_or_workflow = "tool" if runnable.type != RunnableType.cwl_workflow else "workflow"
@@ -287,15 +285,15 @@ def stage_in(
     simultaneous_uploads = kwds.get("simultaneous_uploads", False)
     user_gi = config.user_gi
     history_id = _history_id(user_gi, **kwds)
-    psi = PlanemoStagingInterface(ctx, runnable, user_gi, config.version_major, simultaneous_uploads)
+    psi = PlanemoStagingInterface(ctx, user_gi, config.version_major, simultaneous_uploads)
     job_dict, datasets = psi.stage(
         tool_or_workflow,
         history_id=history_id,
         job_path=job_path,
         use_path_paste=config.use_path_paste,
         to_posix_lines=to_posix_lines,
+        job_dir=test_data,
     )
-
     if datasets and kwds.get("check_uploads_ok", True):
         ctx.vlog(f"Uploaded datasets [{datasets}] for activity, checking history state")
         final_state = _wait_for_history(ctx, user_gi, history_id)
