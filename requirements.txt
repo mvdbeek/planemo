@@ -3,7 +3,7 @@ bioblend>=1.0.0
 click!=8.0.2
 cwltool>=1.0.20191225192155
 ephemeris>=0.10.3
-galaxy-tool-util[edam,extended-assertions]>=24.1,<25.0
+galaxy-tool-util[edam,extended-assertions] @ git+https://github.com/mvdbeek/galaxy.git@bwa_index_directory_datatype#subdirectory=packages/tool_util
 galaxy-util[template]>=24.1,<25.0
 glob2
 gxformat2>=0.14.0
