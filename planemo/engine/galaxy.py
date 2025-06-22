@@ -45,6 +45,7 @@ class GalaxyEngine(BaseEngine, metaclass=abc.ABCMeta):
         RunnableType.cwl_tool,
         RunnableType.cwl_workflow,
         RunnableType.galaxy_workflow,
+        RunnableType.trs_workflow,
         RunnableType.galaxy_tool,
         RunnableType.galaxy_datamanager,
         RunnableType.directory,

@@ -201,10 +201,14 @@ def _execute(  # noqa C901
             if ctx.verbose:
                 summarize_history(ctx, user_gi, history_id)
 
-    elif runnable.type in [RunnableType.galaxy_workflow, RunnableType.cwl_workflow]:
+    elif runnable.type in [RunnableType.galaxy_workflow, RunnableType.cwl_workflow, RunnableType.trs_workflow]:
         response_class = GalaxyWorkflowRunResponse
-        workflow_id = config.workflow_id_for_runnable(runnable)
-        ctx.vlog(f"Found Galaxy workflow ID [{workflow_id}] for URI [{runnable.uri}]")
+        if runnable.type == RunnableType.trs_workflow:
+            workflow_id = _import_trs_workflow(ctx, user_gi, runnable)
+            ctx.vlog(f"Imported TRS workflow with Galaxy ID [{workflow_id}] for URI [{runnable.uri}]")
+        else:
+            workflow_id = config.workflow_id_for_runnable(runnable)
+            ctx.vlog(f"Found Galaxy workflow ID [{workflow_id}] for URI [{runnable.uri}]")
         invocation = user_gi.workflows.invoke_workflow(
             workflow_id,
             inputs=job_dict,
@@ -872,6 +876,47 @@ def _wait_on_state(state_func, polling_backoff=0, timeout=None):
     timeout = timeout or 60 * 60 * 24
     final_state = wait_on(get_state, "state", timeout, polling_backoff)
     return final_state
+
+
+def _import_trs_workflow(ctx, user_gi, runnable):
+    """Import a TRS workflow into Galaxy and return the workflow ID."""
+
+    # Parse TRS URI: trs://#workflow/github.com/org/repo/branch#version
+    uri = runnable.uri
+    if not uri.startswith("trs://"):
+        raise ValueError(f"Invalid TRS URI: {uri}")
+
+    # Extract TRS components
+    trs_path = uri[6:]  # Remove "trs://" prefix
+    if "#" not in trs_path:
+        raise ValueError(f"Invalid TRS URI format, missing version: {uri}")
+
+    trs_tool_id, trs_version_id = trs_path.rsplit("#", 1)
+
+    # Prepare payload for Galaxy API
+    payload = {
+        "archive_source": "trs_tool",
+        "trs_server": "dockstore",
+        "trs_tool_id": trs_tool_id,
+        "trs_version_id": trs_version_id,
+    }
+
+    ctx.vlog(f"Importing TRS workflow with payload: {payload}")
+
+    # Import workflow via Galaxy API
+    try:
+        response = user_gi.workflows._post(payload)
+        workflow_id = response["id"]
+        ctx.vlog(f"Successfully imported TRS workflow with ID: {workflow_id}")
+
+        # For embedded Galaxy instances, check if tools need to be installed
+        # Galaxy's TRS import should handle this automatically, but we log the process
+        ctx.vlog("TRS workflow imported - Galaxy will automatically handle tool installation")
+
+        return workflow_id
+    except Exception as e:
+        ctx.vlog(f"Error importing TRS workflow: {e}")
+        raise Exception(f"Failed to import TRS workflow from {uri}: {e}")
 
 
 __all__ = ("execute",)

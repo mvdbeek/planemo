@@ -54,12 +54,14 @@ TEST_EXTENSIONS = [".yml", ".yaml", ".json"]
 TEST_FILE_NOT_LIST_MESSAGE = "Invalid test definition file [%s] - file must contain a list of tests"
 TEST_FIELD_MISSING_MESSAGE = "Invalid test definition [test #%d in %s] -defintion must field [%s]."
 GALAXY_TOOLS_PREFIX = "gxid://tools/"
+TRS_WORKFLOWS_PREFIX = "trs://"
 
 
 class RunnableType(Enum):
     galaxy_tool = auto()
     galaxy_datamanager = auto()
     galaxy_workflow = auto()
+    trs_workflow = auto()
     cwl_tool = auto()
     cwl_workflow = auto()
     directory = auto()
@@ -78,7 +80,7 @@ class RunnableType(Enum):
 
     @property
     def is_galaxy_artifact(runnable_type) -> bool:
-        return "galaxy" in runnable_type.name
+        return "galaxy" in runnable_type.name or runnable_type.name == "trs_workflow"
 
     @property
     def is_cwl_artifact(runnable_type) -> bool:
@@ -115,7 +117,7 @@ class Runnable(NamedTuple):
 
     @property
     def is_remote_workflow_uri(self) -> bool:
-        return self.uri.startswith((GALAXY_WORKFLOWS_PREFIX, GALAXY_WORKFLOW_INSTANCE_PREFIX))
+        return self.uri.startswith((GALAXY_WORKFLOWS_PREFIX, GALAXY_WORKFLOW_INSTANCE_PREFIX, TRS_WORKFLOWS_PREFIX))
 
     @property
     def test_data_search_path(self) -> str:
@@ -242,8 +244,13 @@ def for_paths(paths: Iterable[str]) -> List[Runnable]:
 
 
 def for_uri(uri: str) -> Runnable:
-    """Produce a class:`Runnable` for supplied Galaxy workflow or tool ID."""
-    runnable_type = RunnableType.galaxy_tool if uri.startswith(GALAXY_TOOLS_PREFIX) else RunnableType.galaxy_workflow
+    """Produce a class:`Runnable` for supplied Galaxy workflow, tool ID, or TRS workflow."""
+    if uri.startswith(GALAXY_TOOLS_PREFIX):
+        runnable_type = RunnableType.galaxy_tool
+    elif uri.startswith(TRS_WORKFLOWS_PREFIX):
+        runnable_type = RunnableType.trs_workflow
+    else:
+        runnable_type = RunnableType.galaxy_workflow
     runnable = Runnable(uri, runnable_type)
     return runnable
 

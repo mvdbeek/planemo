@@ -1,4 +1,5 @@
 import os
+import re
 from typing import (
     Any,
     Dict,
@@ -18,13 +19,41 @@ from .runnable import (
     GALAXY_TOOLS_PREFIX,
 )
 
+TRS_WORKFLOWS_PREFIX = "trs://"
+
+
+def _is_trs_url_pattern(identifier: str) -> bool:
+    """Check if identifier matches TRS URL pattern like org/repo/branch/version."""
+    # Pattern: org-name/repo-name/branch/version
+    pattern = r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+/[a-zA-Z0-9._/-]+/[a-zA-Z0-9._-]+$"
+    return bool(re.match(pattern, identifier))
+
+
+def _convert_trs_url_to_uri(identifier: str) -> str:
+    """Convert TRS URL pattern to TRS URI format."""
+    parts = identifier.split("/", 3)  # Split into at most 4 parts
+    if len(parts) != 4:
+        raise ValueError(f"Invalid TRS URL format: {identifier}")
+
+    org, repo, branch, version = parts
+    trs_tool_id = f"#workflow/github.com/{org}/{repo}/{branch}"
+    return f"{TRS_WORKFLOWS_PREFIX}{trs_tool_id}#{version}"
+
 
 def for_runnable_identifier(ctx, runnable_identifier, kwds: Dict[str, Any]):
     """Convert URI, path, or alias into Runnable."""
     # could be a URI, path, or alias
     current_profile = kwds.get("profile")
     runnable_identifier = translate_alias(ctx, runnable_identifier, current_profile)
-    if not runnable_identifier.startswith((GALAXY_WORKFLOWS_PREFIX, GALAXY_WORKFLOW_INSTANCE_PREFIX)):
+
+    # Check if it's a TRS URL pattern first
+    if _is_trs_url_pattern(runnable_identifier):
+        runnable_identifier = _convert_trs_url_to_uri(runnable_identifier)
+        return for_uri(runnable_identifier)
+
+    if not runnable_identifier.startswith(
+        (GALAXY_WORKFLOWS_PREFIX, GALAXY_WORKFLOW_INSTANCE_PREFIX, TRS_WORKFLOWS_PREFIX)
+    ):
         runnable_identifier = uri_to_path(ctx, runnable_identifier)
     if os.path.exists(runnable_identifier):
         runnable = for_path(runnable_identifier)
