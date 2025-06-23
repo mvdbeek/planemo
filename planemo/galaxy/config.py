@@ -24,6 +24,7 @@ from typing import (
     Set,
     TYPE_CHECKING,
 )
+from pathlib import Path
 
 from galaxy.tool_util.deps import docker_util
 from galaxy.util.commands import argv_to_str
@@ -231,7 +232,7 @@ def docker_galaxy_config(ctx, runnables, for_tests=False, **kwds):
         port = _get_port(kwds)
         properties = _shared_galaxy_properties(config_directory, kwds, for_tests=for_tests)
         _handle_container_resolution(ctx, kwds, properties)
-        master_api_key = _get_master_api_key(kwds)
+        bootstrap_admin_api_key = _get_bootstrap_admin_api_key(kwds)
 
         template_args = dict(
             shed_tool_path=shed_tool_path,
@@ -279,7 +280,7 @@ def docker_galaxy_config(ctx, runnables, for_tests=False, **kwds):
             test_data_dir,
             port,
             server_name,
-            master_api_key,
+            bootstrap_admin_api_key,
             runnables,
             docker_target_kwds=docker_target_kwds,
             volumes=docker_volumes,
@@ -363,21 +364,19 @@ def local_galaxy_config(ctx, runnables, for_tests=False, **kwds):
         sheds_config_path = _configure_sheds_config_file(ctx, config_directory, runnables, **kwds)
 
         database_location = config_join("galaxy.sqlite")
-        master_api_key = _get_master_api_key(kwds)
+        bootstrap_admin_api_key = _get_bootstrap_admin_api_key(kwds)
         dependency_dir = os.path.join(config_directory, "deps")
         _ensure_directory(shed_tool_path)
         port = _get_port(kwds)
-        log_level = log_level = "DEBUG" if ctx.verbose else "INFO"
+        log_level = "DEBUG" if ctx.verbose else "INFO"
+        temp_directory = Path(config_directory)
         template_args = dict(
             port=port,
             host=kwds.get("host", "127.0.0.1"),
             server_name=server_name,
-            temp_directory=config_directory,
             shed_tool_path=shed_tool_path,
             database_location=database_location,
             tool_conf=tool_conf,
-            debug=kwds.get("debug", "true"),
-            id_secret=kwds.get("id_secret", hashlib.md5(str(time.time()).encode("utf-8")).hexdigest()),
             log_level=log_level,
         )
         tool_config_file = f"{tool_conf},{shed_tool_conf}"
@@ -396,30 +395,28 @@ def local_galaxy_config(ctx, runnables, for_tests=False, **kwds):
                 check_upload_content="false",
                 tool_dependency_dir=dependency_dir,
                 file_path=file_path,
-                new_file_path="${temp_directory}/tmp",
+                new_file_path=str(temp_directory / "tmp"),
                 tool_config_file=tool_config_file,
                 tool_sheds_config_file=sheds_config_path,
                 manage_dependency_relationships="false",
-                job_working_directory="${temp_directory}/job_working_directory",
-                template_cache_path="${temp_directory}/compiled_templates",
+                job_working_directory=str(temp_directory / "job_working_directory"),
+                template_cache_path=str(temp_directory / "compiled_templates"),
                 citation_cache_type="file",
-                citation_cache_data_dir="${temp_directory}/citations/data",
-                citation_cache_lock_dir="${temp_directory}/citations/lock",
+                citation_cache_data_dir=str(temp_directory / "citations/data"),
+                citation_cache_lock_dir=str(temp_directory / "citations/lock"),
                 database_auto_migrate="true",
                 enable_beta_tool_formats="true",
-                id_secret="${id_secret}",
-                log_level="${log_level}",
-                debug="${debug}",
+                id_secret=kwds.get("id_secret", hashlib.md5(str(time.time()).encode("utf-8")).hexdigest()),
+                debug=kwds.get("debug", False),
                 watch_tools="auto",
                 default_job_shell="/bin/bash",  # For conda dependency resolution
                 tool_data_table_config_path=",".join(tool_data_tables) if tool_data_tables else None,
-                data_manager_config_file=",".join(data_manager_config_paths)
-                or None,  # without 'or None' may raise IOError in galaxy (see #946)
-                integrated_tool_panel_config=("${temp_directory}/integrated_tool_panel_conf.xml"),
+                data_manager_config_file=",".join(data_manager_config_paths),
+                integrated_tool_panel_config=str(temp_directory / "integrated_tool_panel_conf.xml"),
                 migrated_tools_config=empty_tool_conf,
                 test_data_dir=test_data_dir,  # TODO: make gx respect this
                 shed_data_manager_config_file=shed_data_manager_config_file,
-                outputs_to_working_directory="true",  # this makes Galaxy's files dir RO for dockerized testing
+                outputs_to_working_directory=True,  # this makes Galaxy's files dir RO for dockerized testing
                 object_store_store_by="uuid",
             )
         )
@@ -472,7 +469,7 @@ def local_galaxy_config(ctx, runnables, for_tests=False, **kwds):
             test_data_dir,
             port,
             server_name,
-            master_api_key,
+            bootstrap_admin_api_key,
             runnables,
             galaxy_root,
             kwds,
@@ -579,18 +576,18 @@ def _shared_galaxy_properties(config_directory, kwds, for_tests):
     modalities and many taken care of internally to the container in that mode.
     But this method sets up API stuff, tool, and job stuff that can be shared.
     """
-    master_api_key = _get_master_api_key(kwds)
+    bootstrap_admin_api_key = _get_bootstrap_admin_api_key(kwds)
     user_email = _user_email(kwds)
     properties = {
-        "master_api_key": master_api_key,
+        "bootstrap_admin_api_key": bootstrap_admin_api_key,
         "admin_users": f"{user_email},test@bx.psu.edu",
-        "expose_dataset_path": "True",
+        "expose_dataset_path": True,
         "collect_outputs_from": "job_working_directory",
-        "allow_path_paste": "True",
-        "check_migrate_tools": "False",
-        "use_cached_dependency_manager": str(kwds.get("conda_auto_install", False)),
+        "allow_path_paste": True,
+        "check_migrate_tools": False,
+        "use_cached_dependency_manager": kwds.get("conda_auto_install", False),
         "brand": kwds.get("galaxy_brand", DEFAULT_GALAXY_BRAND),
-        "strict_cwl_validation": str(not kwds.get("non_strict_cwl", False)),
+        "strict_cwl_validation": not kwds.get("non_strict_cwl", False),
     }
     if kwds.get("no_cleanup", False):
         properties["cleanup_job"] = "never"
@@ -615,16 +612,16 @@ def external_galaxy_config(ctx, runnables, for_tests=False, **kwds):
     yield BaseGalaxyConfig(
         ctx=ctx,
         galaxy_url=kwds.get("galaxy_url", None),
-        master_api_key=_get_master_api_key(kwds),
+        bootstrap_admin_api_key=_get_bootstrap_admin_api_key(kwds),
         user_api_key=kwds.get("galaxy_user_key", None),
         runnables=runnables,
         kwds=kwds,
     )
 
 
-def _get_master_api_key(kwds):
-    master_api_key = kwds.get("galaxy_admin_key") or DEFAULT_ADMIN_API_KEY
-    return master_api_key
+def _get_bootstrap_admin_api_key(kwds):
+    bootstrap_admin_api_key = kwds.get("galaxy_admin_key") or DEFAULT_ADMIN_API_KEY
+    return bootstrap_admin_api_key
 
 
 def _get_port(kwds):
@@ -749,14 +746,14 @@ class BaseGalaxyConfig(GalaxyInterface):
         self,
         ctx,
         galaxy_url,
-        master_api_key,
+        bootstrap_admin_api_key,
         user_api_key,
         runnables,
         kwds,
     ):
         self._ctx = ctx
         self.galaxy_url = galaxy_url
-        self.master_api_key = master_api_key
+        self.bootstrap_admin_api_key = bootstrap_admin_api_key
         self._user_api_key = user_api_key
         self.runnables = runnables
         self._kwds = kwds
@@ -770,7 +767,7 @@ class BaseGalaxyConfig(GalaxyInterface):
     @property
     def gi(self):
         assert self.galaxy_url
-        return gi(url=self.galaxy_url, key=self.master_api_key)
+        return gi(url=self.galaxy_url, key=self.bootstrap_admin_api_key)
 
     @property
     def user_gi(self):
@@ -886,7 +883,7 @@ class BaseManagedGalaxyConfig(BaseGalaxyConfig):
         test_data_dir,
         port,
         server_name,
-        master_api_key,
+        bootstrap_admin_api_key,
         runnables,
         kwds,
     ):
@@ -894,7 +891,7 @@ class BaseManagedGalaxyConfig(BaseGalaxyConfig):
         super().__init__(
             ctx=ctx,
             galaxy_url=galaxy_url,
-            master_api_key=master_api_key,
+            bootstrap_admin_api_key=bootstrap_admin_api_key,
             user_api_key=None,
             runnables=runnables,
             kwds=kwds,
@@ -923,7 +920,7 @@ class DockerGalaxyConfig(BaseManagedGalaxyConfig):
         test_data_dir,
         port,
         server_name,
-        master_api_key,
+        bootstrap_admin_api_key,
         runnables,
         docker_target_kwds,
         volumes,
@@ -937,7 +934,7 @@ class DockerGalaxyConfig(BaseManagedGalaxyConfig):
             test_data_dir,
             port,
             server_name,
-            master_api_key,
+            bootstrap_admin_api_key,
             runnables,
             kwds,
         )
@@ -1008,7 +1005,7 @@ class LocalGalaxyConfig(BaseManagedGalaxyConfig):
         test_data_dir,
         port,
         server_name,
-        master_api_key,
+        bootstrap_admin_api_key,
         runnables,
         galaxy_root,
         kwds,
@@ -1020,7 +1017,7 @@ class LocalGalaxyConfig(BaseManagedGalaxyConfig):
             test_data_dir,
             port,
             server_name,
-            master_api_key,
+            bootstrap_admin_api_key,
             runnables,
             kwds,
         )
@@ -1334,8 +1331,7 @@ def _build_env_for_galaxy(properties, template_args):
     for key, value in properties.items():
         if value is not None:  # Do not override None with empty string
             var = f"GALAXY_CONFIG_OVERRIDE_{key.upper()}"
-            value = _sub(value, template_args)
-            env[var] = value
+            env[var] = str(value)
     return env
 
 

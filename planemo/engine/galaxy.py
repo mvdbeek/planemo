@@ -92,7 +92,7 @@ class GalaxyEngine(BaseEngine, metaclass=abc.ABCMeta):
                 for test_case in expanded_test_cases:
                     galaxy_interactor_kwds = {
                         "galaxy_url": config.galaxy_url,
-                        "master_api_key": config.master_api_key,
+                        "master_api_key": config.bootstrap_admin_api_key,
                         "api_key": config.user_api_key,
                         "keep_outputs_dir": self._kwds.get("test_data_target_dir"),
                     }
