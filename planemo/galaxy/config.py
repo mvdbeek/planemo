@@ -367,6 +367,7 @@ def local_galaxy_config(ctx, runnables, for_tests=False, **kwds):
         dependency_dir = os.path.join(config_directory, "deps")
         _ensure_directory(shed_tool_path)
         port = _get_port(kwds)
+        log_level = log_level = "DEBUG" if ctx.verbose else "INFO"
         template_args = dict(
             port=port,
             host=kwds.get("host", "127.0.0.1"),
@@ -377,7 +378,7 @@ def local_galaxy_config(ctx, runnables, for_tests=False, **kwds):
             tool_conf=tool_conf,
             debug=kwds.get("debug", "true"),
             id_secret=kwds.get("id_secret", hashlib.md5(str(time.time()).encode("utf-8")).hexdigest()),
-            log_level="DEBUG" if ctx.verbose else "INFO",
+            log_level=log_level,
         )
         tool_config_file = f"{tool_conf},{shed_tool_conf}"
         # Setup both galaxy_email and older test user test@bx.psu.edu
@@ -387,6 +388,7 @@ def local_galaxy_config(ctx, runnables, for_tests=False, **kwds):
             dict(
                 server_name="main",
                 enable_celery_tasks="true",
+                log_level=log_level,
                 ftp_upload_dir_template="${ftp_upload_dir}",
                 ftp_upload_purge="false",
                 ftp_upload_dir=test_data_dir or os.path.abspath("."),
