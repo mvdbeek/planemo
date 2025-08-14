@@ -89,20 +89,31 @@ class WorkflowProgress(Progress):
         # This is a tricky issue, because we might be waiting to schedule a new step whose inputs are paused.
         # Unlikely that this will ever be unpaused, so we also consider the "ready" invocation state and the presence of paused jobs as terminal.
         # We might want to tweak the state in Galaxy if we pause jobs because of input errors, so that this hack won't be rquired.
-        return (
-            invocation_state_terminal(self.invocation_state)
-            or self.invocation_state == "ready"
-            and self.num_paused
-            and self.num_errors
+        base_terminal = invocation_state_terminal(self.invocation_state)
+        ready_with_errors = self.invocation_state == "ready" and self.num_paused and self.num_errors
+        result = base_terminal or ready_with_errors
+        print(
+            f"[DEBUG] invocation_scheduling_terminal: state={self.invocation_state}, base_terminal={base_terminal}, ready_with_errors={ready_with_errors}, num_paused={self.num_paused}, num_errors={self.num_errors}, result={result}"
         )
+        return result
 
     @property
     def jobs_terminal(self):
-        return self.job_count is not None and self.job_count == self.jobs_terminal_count
+        result = self.job_count is not None and self.job_count == self.jobs_terminal_count
+        print(
+            f"[DEBUG] jobs_terminal: job_count={self.job_count}, jobs_terminal_count={self.jobs_terminal_count}, result={result}"
+        )
+        return result
 
     @property
     def terminal(self):
-        return self.invocation_scheduling_terminal and self.jobs_terminal
+        sched_term = self.invocation_scheduling_terminal
+        jobs_term = self.jobs_terminal
+        result = sched_term and jobs_term
+        print(
+            f"[DEBUG] terminal: invocation_scheduling_terminal={sched_term}, jobs_terminal={jobs_term}, result={result}"
+        )
+        return result
 
     def handle_subworkflow_counts(self, num: int, num_complete: int):
         previous_count = self.num_subworkflows
@@ -129,6 +140,9 @@ class WorkflowProgress(Progress):
         self.step_count = len(invocation.get("steps") or []) or None
         self.step_states = step_states(invocation)
 
+        print(f"[DEBUG] handle_invocation: invocation_state={self.invocation_state}, step_count={self.step_count}")
+        print(f"[DEBUG] handle_invocation: job_state_summary={job_state_summary}")
+
         steps_completed = None
 
         steps_status = ""
@@ -152,6 +166,7 @@ class WorkflowProgress(Progress):
 
         jobs_status = ""
         self.job_count = job_count(job_state_summary)
+        print(f"[DEBUG] handle_invocation: calculated job_count={self.job_count}")
         self.num_new = count_states(job_state_summary, ["new"])
         self.num_queued = count_states(job_state_summary, ["queued", "waiting"])
         self.num_running = count_states(job_state_summary, ["running"])
@@ -160,6 +175,10 @@ class WorkflowProgress(Progress):
         self.jobs_completed = self.num_ok + self.num_errors
         self.num_paused = count_states(job_state_summary, ["paused"])
         self.jobs_terminal_count = self.jobs_completed + self.num_paused
+
+        print(
+            f"[DEBUG] handle_invocation: job counts - new={self.num_new}, queued={self.num_queued}, running={self.num_running}, errors={self.num_errors}, ok={self.num_ok}, paused={self.num_paused}, total={self.job_count}, terminal_count={self.jobs_terminal_count}"
+        )
         jobs_total: Optional[int] = self.job_count
         if self.num_errors > 0:
             self.jobs_color = self.display.style_error
@@ -308,6 +327,7 @@ def job_count(job_summary: Optional[InvocationJobsSummary]) -> int:
         for state_count in states.values():
             if state_count:
                 count += state_count
+    print(f"[DEBUG] job_count: job_summary={job_summary}, calculated count={count}")
     return count
 
 
