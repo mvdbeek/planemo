@@ -60,6 +60,7 @@ class WorkflowProgress(Progress):
         self.num_running: int = 0
         self.num_errors: int = 0
         self.num_paused: int = 0
+        self.jobs_terminal_count: int = 0
         self.printed_job_errors: Set[str] = set()  # Track printed job errors by job ID
 
         self.num_subworkflows: int = 0
