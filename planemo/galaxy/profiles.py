@@ -217,12 +217,15 @@ def _profile_options(ctx, profile_name, **kwds):
         shed_tool_conf = os.path.join(profile_directory, "shed_tool_conf.xml")
         tool_dependency_dir = os.path.join(profile_directory, "deps")
 
+        mulled_resolution_cache_data_dir = os.path.join(profile_directory, "mulled_resolution_cache")
+
         engine_options = dict(
             file_path=file_path,
             tool_dependency_dir=tool_dependency_dir,
             shed_tool_conf=shed_tool_conf,
             shed_tool_path=shed_tool_path,
             galaxy_brand=profile_name,
+            mulled_resolution_cache_data_dir=mulled_resolution_cache_data_dir,
         )
     profile_options.update(engine_options)
     profile_options["galaxy_brand"] = profile_name

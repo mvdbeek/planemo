@@ -1420,6 +1420,11 @@ def _write_tool_conf(ctx, tool_paths, tool_conf_path):
 
 
 def _handle_container_resolution(ctx, kwds, galaxy_properties):
+    mulled_resolution_cache_data_dir = kwds.get(
+        "mulled_resolution_cache_data_dir",
+        os.path.join(ctx.workspace, "mulled_resolution_cache"),
+    )
+    galaxy_properties["mulled_resolution_cache_data_dir"] = mulled_resolution_cache_data_dir
     if kwds.get("mulled_containers", False):
         galaxy_properties["enable_beta_mulled_containers"] = "True"
         involucro_context = build_involucro_context(ctx, **kwds)
