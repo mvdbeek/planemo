@@ -72,8 +72,13 @@ class BioblendInvocationApi(InvocationApi):
         return self._user_gi.jobs.show_job(job_id, full_details=full_details)
 
 
+INVOCATION_SUCCESS_STATES = ("scheduled", "completed")
+INVOCATION_ERROR_STATES = ("cancelled", "failed")
+INVOCATION_TERMINAL_STATES = INVOCATION_SUCCESS_STATES + INVOCATION_ERROR_STATES
+
+
 def invocation_state_terminal(state: str):
-    return state in ["scheduled", "completed", "cancelled", "failed"]
+    return state in INVOCATION_TERMINAL_STATES
 
 
 JOB_ERROR_STATES = ["error", "deleted", "failed", "stopped", "stop", "deleting"]

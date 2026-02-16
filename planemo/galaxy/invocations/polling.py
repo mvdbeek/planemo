@@ -7,6 +7,7 @@ from typing import (
 
 from .api import (
     invocation_state_terminal,
+    INVOCATION_SUCCESS_STATES,
     InvocationApi,
     InvocationJobsSummary,
     JOB_ERROR_STATES,
@@ -212,7 +213,7 @@ def workflow_in_error_message(
         ctx.vlog(f"Problem waiting on invocation: {str(last_exception)}")
         error_message = f"Final state of invocation {invocation_id} is [{invocation_state}]"
 
-    if invocation_state_terminal(invocation_state) and invocation_state not in ("scheduled", "completed"):
+    if invocation_state_terminal(invocation_state) and invocation_state not in INVOCATION_SUCCESS_STATES:
         msg = f"Failed to run workflow, invocation ended in [{invocation_state}] state."
         ctx.vlog(msg)
         error_message = msg if not error_message else f"{error_message}. {msg}"
