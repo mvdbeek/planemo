@@ -8,6 +8,7 @@ from planemo.galaxy.invocations.progress_display import DisplayConfiguration
 
 STEP_NEW = {"state": "new", "id": "1"}
 STEP_SCHEDULED = {"state": "scheduled", "id": "1"}
+STEP_COMPLETED = {"state": "completed", "id": "1"}
 SLEEP = 0.8
 
 
@@ -99,6 +100,9 @@ def test_workflow_progress_scheduling_state_handling():
         workflow_progress.handle_invocation({"state": "scheduled", "steps": [STEP_NEW]}, {"states": {"new": 1}})
         assert workflow_progress.invocation_scheduling_terminal
 
+        workflow_progress.handle_invocation({"state": "completed", "steps": [STEP_NEW]}, {"states": {"new": 1}})
+        assert workflow_progress.invocation_scheduling_terminal
+
         workflow_progress.handle_invocation({"state": "cancelled", "steps": [STEP_NEW]}, {"states": {"new": 1}})
         assert workflow_progress.invocation_scheduling_terminal
 
@@ -140,3 +144,29 @@ def test_workflow_progress_job_state_handling():
 
         workflow_progress.handle_invocation(scheduled_invocation, {"states": {"ok": 2, "paused": 1, "new": 1}})
         assert not workflow_progress.jobs_terminal
+
+
+def test_workflow_progress_completed_invocation_state():
+    """Test that 'completed' invocation state is treated like 'scheduled'."""
+    completed_invocation = {"state": "completed", "steps": [STEP_COMPLETED]}
+
+    with WorkflowProgress(DisplayConfiguration()) as workflow_progress:
+        workflow_progress.handle_invocation(completed_invocation, {"states": {"ok": 2}})
+        assert workflow_progress.invocation_scheduling_terminal
+        assert workflow_progress.jobs_terminal
+        assert workflow_progress.terminal
+
+
+def test_workflow_progress_completed_step_state_counting():
+    """Test that 'completed' step states are counted alongside 'scheduled' for progress."""
+    mixed_steps = [STEP_SCHEDULED, STEP_COMPLETED, STEP_NEW]
+
+    with WorkflowProgress(DisplayConfiguration()) as workflow_progress:
+        workflow_progress.handle_invocation(
+            {"state": "scheduled", "steps": mixed_steps}, {"states": {"ok": 2}}
+        )
+        # Both 'scheduled' and 'completed' steps should be counted
+        num_scheduled = (workflow_progress.step_states.get("scheduled") or 0) + (
+            workflow_progress.step_states.get("completed") or 0
+        )
+        assert num_scheduled == 2

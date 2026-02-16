@@ -143,7 +143,7 @@ class WorkflowProgress(Progress):
             steps_status = "Invocation failed"
             self.steps_color = self.display.style_error
         else:
-            num_scheduled = self.step_states.get("scheduled") or 0
+            num_scheduled = (self.step_states.get("scheduled") or 0) + (self.step_states.get("completed") or 0)
             if num_scheduled > 0:
                 self.steps_color = self.display.style_ok
             else:

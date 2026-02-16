@@ -388,7 +388,7 @@ def invocation_to_run_response(
             polling_backoff=polling_backoff,
             fail_fast=fail_fast,
         )
-        if final_invocation_state not in ("ok", "skipped", "scheduled"):
+        if final_invocation_state not in ("ok", "skipped", "scheduled", "completed"):
             msg = f"Failed to run workflow [{workflow_id}], at least one job is in [{final_invocation_state}] state."
             ctx.vlog(msg)
             summarize_history(ctx, user_gi, history_id)
@@ -893,7 +893,7 @@ class GalaxyWorkflowRunResponse(GalaxyBaseRunResponse):
         # if the invocation was created without error (i.e., not in a failed/cancelled state)
         if self._no_wait:
             return self.invocation_state not in ["failed", "cancelled"]
-        return self.history_state in ["ok", "skipped", None] and self.invocation_state == "scheduled"
+        return self.history_state in ["ok", "skipped", None] and self.invocation_state in ["scheduled", "completed"]
 
     def export_invocation(self, output_path, export_format="rocrate.zip"):
         """Export workflow invocation as archive."""

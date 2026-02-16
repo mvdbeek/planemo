@@ -73,7 +73,7 @@ class BioblendInvocationApi(InvocationApi):
 
 
 def invocation_state_terminal(state: str):
-    return state in ["scheduled", "cancelled", "failed"]
+    return state in ["scheduled", "completed", "cancelled", "failed"]
 
 
 JOB_ERROR_STATES = ["error", "deleted", "failed", "stopped", "stop", "deleting"]
