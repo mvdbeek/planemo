@@ -162,9 +162,7 @@ def test_workflow_progress_completed_step_state_counting():
     mixed_steps = [STEP_SCHEDULED, STEP_COMPLETED, STEP_NEW]
 
     with WorkflowProgress(DisplayConfiguration()) as workflow_progress:
-        workflow_progress.handle_invocation(
-            {"state": "scheduled", "steps": mixed_steps}, {"states": {"ok": 2}}
-        )
+        workflow_progress.handle_invocation({"state": "scheduled", "steps": mixed_steps}, {"states": {"ok": 2}})
         # Both 'scheduled' and 'completed' steps should be counted
         num_scheduled = (workflow_progress.step_states.get("scheduled") or 0) + (
             workflow_progress.step_states.get("completed") or 0

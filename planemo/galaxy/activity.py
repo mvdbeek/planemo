@@ -138,7 +138,7 @@ class PlanemoStagingInterface(StagingInterface):
 
     def _post(self, api_path: str, payload: Dict[str, Any], files_attached: bool = False) -> Dict[str, Any]:
         # Keep the files_attached argument because StagingInterface._post() had
-        # it until Galaxy 22.05.
+        # it until Galaxy 23.1.
         url = urljoin(self._user_gi.url, "api/" + api_path)
         if payload.get("__files"):  # put attached files where BioBlend expects them
             files_attached = True

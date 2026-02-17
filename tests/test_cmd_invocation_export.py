@@ -40,8 +40,8 @@ class GalaxyInvocationExportTestCase(CliTestCase, UsesServeCommand):
         self._pid_file = os.path.join(self._home, "test.pid")
 
     @pytest.mark.skipif(
-        target_galaxy_branch() == "release_22.05",
-        reason="Skipping test on Galaxy 22.05, does not support rocrate.zip export.",
+        target_galaxy_branch() == "release_23.1",
+        reason="Skipping test on Galaxy 23.1, does not support rocrate.zip export.",
     )
     @skip_if_environ("PLANEMO_SKIP_GALAXY_TESTS")
     @mark.tests_galaxy_branch

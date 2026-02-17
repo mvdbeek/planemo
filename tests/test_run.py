@@ -179,8 +179,8 @@ class RunTestCase(CliTestCase):
                 assert len(zip_ref.namelist()) > 0
 
     @pytest.mark.skipif(
-        target_galaxy_branch() == "release_22.05",
-        reason="Skipping test on Galaxy 22.05, TRS import not supported.",
+        target_galaxy_branch() == "release_23.1",
+        reason="Skipping test on Galaxy 23.1, TRS import not supported.",
     )
     @skip_if_environ("PLANEMO_SKIP_GALAXY_TESTS")
     @mark.tests_galaxy_branch
