@@ -155,7 +155,10 @@ def test_galaxy_workflow_step_failed():
             "engine": "galaxy",
             "no_dependency_resolution": True,
             "paste_test_data_paths": False,
-            "extra_tools": ["$GALAXY_FUNCTIONAL_TEST_TOOLS"],
+            "extra_tools": [
+                "$GALAXY_FUNCTIONAL_TEST_TOOLS/job_properties.xml",
+                "$GALAXY_FUNCTIONAL_TEST_TOOLS/cat.xml",
+            ],
             "test_output_json": json_out.name,
             "galaxy_branch": target_galaxy_branch(),
             "fail_fast": True,

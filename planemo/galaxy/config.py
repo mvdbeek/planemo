@@ -521,10 +521,11 @@ def write_galaxy_config(galaxy_root, properties, env, kwds, template_args, confi
 
 
 def _expand_paths(galaxy_root: Optional[str], extra_tools: List[str]) -> List[str]:
-    """Replace $GALAXY_FUNCTION_TEST_TOOLS with actual path."""
+    """Replace $GALAXY_FUNCTIONAL_TEST_TOOLS with actual path."""
     if galaxy_root:
+        gx_test_tools = os.path.join(galaxy_root, "test/functional/tools")
         extra_tools = [
-            path if path != GX_TEST_TOOL_PATH else os.path.join(galaxy_root, "test/functional/tools")
+            path.replace(GX_TEST_TOOL_PATH, gx_test_tools) if path.startswith(GX_TEST_TOOL_PATH) else path
             for path in extra_tools
         ]
     return extra_tools
