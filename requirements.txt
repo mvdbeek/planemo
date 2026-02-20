@@ -1,5 +1,5 @@
 allure-python-commons
-bioblend>=1.6.0
+bioblend @ git+https://github.com/mvdbeek/bioblend@add_completed_state
 click!=8.0.2
 cryptography>=46.0.3
 cwltool>=1.0.20191225192155
