@@ -504,6 +504,13 @@ def write_galaxy_config(galaxy_root, properties, env, kwds, template_args, confi
         env["GRAVITY_STATE_DIR"] = config_join("gravity")
         with NamedTemporaryFile(suffix=".sock", delete=True) as nt:
             env["SUPERVISORD_SOCKET"] = nt.name
+        if os.geteuid() == 0:
+            # Gravity refuses to run with the supervisor process manager as root
+            # and requires systemd, which may not be available (e.g. in containers).
+            # Bypass gravity entirely by using gunicorn directly via APP_WEBSERVER.
+            bind = f"{kwds.get('host', 'localhost')}:{template_args['port']}"
+            env["APP_WEBSERVER"] = "gunicorn"
+            env["GUNICORN_CMD_ARGS"] = f"--bind={bind} --config lib/galaxy/web_stack/gunicorn_config.py --timeout 300"
         write_file(
             env["GALAXY_CONFIG_FILE"],
             json.dumps(
@@ -1100,7 +1107,7 @@ class LocalGalaxyConfig(BaseManagedGalaxyConfig):
             if exists:
                 with open(self.pid_file) as f:
                     print(f"pid_file contents are [{f.read()}]")
-        if self.env.get("GRAVITY_STATE_DIR"):
+        if self.env.get("GRAVITY_STATE_DIR") and not self.env.get("APP_WEBSERVER"):
             stop_gravity(
                 virtual_env=self.virtual_env_dir or os.path.join(self.galaxy_root, ".venv"),
                 gravity_state_dir=self.gravity_state_dir,
