@@ -346,7 +346,7 @@ def cli_daemon_galaxy(runner, pid_file, port, command_list, exit_code=0):
     _wait_on_future_suppress_exception(future)
 
 
-def launch_and_wait_for_galaxy(port, func, args=[], timeout=600, timeout_multiplier=1, run_as_subprocess=False):
+def launch_and_wait_for_galaxy(port, func, args=[], timeout=300, timeout_multiplier=1, run_as_subprocess=False):
     """Run func(args) in a thread and wait on port for service.
 
     Service should remain up so check network a few times, this prevents
