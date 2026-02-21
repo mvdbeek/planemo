@@ -91,6 +91,9 @@ class UsesServeCommand:
             self._cleanup_hooks.append(lambda: future.cancel())
 
     def _print_galaxy_logs(self):
+        import glob
+
+        found_any = False
         log_path = os.path.join(self.galaxy_root, "main.log")
         if os.path.exists(log_path):
             with open(log_path) as f:
@@ -98,10 +101,21 @@ class UsesServeCommand:
                 if contents:
                     print(f"Galaxy log ({log_path}):")
                     print(contents)
-                else:
-                    print(f"Galaxy log file exists but is empty: {log_path}")
-        else:
-            print(f"Galaxy log file not found at {log_path}")
+                    found_any = True
+        # With Gravity (Galaxy >= 22.01), logs are in the gravity state dir,
+        # not galaxy_root/main.log. Search for gravity log files in temp dirs.
+        for gravity_log in sorted(glob.glob("/tmp/tmp*/gravity/log/*.log")):
+            try:
+                with open(gravity_log) as f:
+                    contents = f.read()
+                if contents:
+                    print(f"Gravity log ({gravity_log}):")
+                    print(contents)
+                    found_any = True
+            except Exception:
+                pass
+        if not found_any:
+            print(f"No Galaxy or Gravity log files found (checked {log_path} and /tmp/tmp*/gravity/log/)")
 
     @property
     def _user_gi(self):

@@ -1142,10 +1142,23 @@ class LocalGalaxyConfig(BaseManagedGalaxyConfig):
 
     @property
     def log_contents(self):
-        if not os.path.exists(self.log_file):
-            return ""
-        with open(self.log_file) as f:
-            return f.read()
+        contents = ""
+        if os.path.exists(self.log_file):
+            with open(self.log_file) as f:
+                contents = f.read()
+        gravity_log_dir = os.path.join(self.env.get("GRAVITY_STATE_DIR", ""), "log")
+        if os.path.isdir(gravity_log_dir):
+            for log_name in sorted(os.listdir(gravity_log_dir)):
+                log_path = os.path.join(gravity_log_dir, log_name)
+                if os.path.isfile(log_path):
+                    try:
+                        with open(log_path) as f:
+                            log_text = f.read()
+                        if log_text:
+                            contents += f"\n=== {log_name} ===\n{log_text}"
+                    except Exception:
+                        pass
+        return contents
 
     def cleanup(self):
         shutil.rmtree(self.config_directory, CLEANUP_IGNORE_ERRORS)
