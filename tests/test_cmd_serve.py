@@ -82,9 +82,26 @@ class UsesServeCommand:
 
     def _launch_thread_and_wait(self, func, args=None, run_as_subprocess=False, **kwd):
         args = args or []
-        future = launch_and_wait_for_galaxy(self._port, func, [args], run_as_subprocess=run_as_subprocess, **kwd)
+        try:
+            future = launch_and_wait_for_galaxy(self._port, func, [args], run_as_subprocess=run_as_subprocess, **kwd)
+        except Exception:
+            self._print_galaxy_logs()
+            raise
         if future:
             self._cleanup_hooks.append(lambda: future.cancel())
+
+    def _print_galaxy_logs(self):
+        log_path = os.path.join(self.galaxy_root, "main.log")
+        if os.path.exists(log_path):
+            with open(log_path) as f:
+                contents = f.read()
+                if contents:
+                    print(f"Galaxy log ({log_path}):")
+                    print(contents)
+                else:
+                    print(f"Galaxy log file exists but is empty: {log_path}")
+        else:
+            print(f"Galaxy log file not found at {log_path}")
 
     @property
     def _user_gi(self):
