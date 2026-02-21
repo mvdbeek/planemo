@@ -84,7 +84,7 @@ class UsesServeCommand:
         args = args or []
         try:
             future = launch_and_wait_for_galaxy(self._port, func, [args], run_as_subprocess=run_as_subprocess, **kwd)
-        except Exception:
+        except BaseException:
             self._print_galaxy_logs()
             raise
         if future:
