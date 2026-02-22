@@ -91,31 +91,67 @@ class UsesServeCommand:
             self._cleanup_hooks.append(lambda: future.cancel())
 
     def _print_galaxy_logs(self):
+        """Print Galaxy/Gravity log files for debugging startup failures.
+
+        Writes to stderr to ensure output is visible in CI even when
+        pytest captures stdout.
+        """
         import glob
+        import sys
+        import tempfile
+
+        def _log(msg):
+            sys.stderr.write(msg + "\n")
+            sys.stderr.flush()
+
+        _log(f"\n=== Galaxy log dump (galaxy_root={self.galaxy_root}) ===")
 
         found_any = False
+
+        # Check legacy main.log (Galaxy < 22.01)
         log_path = os.path.join(self.galaxy_root, "main.log")
         if os.path.exists(log_path):
             with open(log_path) as f:
                 contents = f.read()
                 if contents:
-                    print(f"Galaxy log ({log_path}):")
-                    print(contents)
+                    _log(f"--- Galaxy log ({log_path}) ---")
+                    _log(contents)
                     found_any = True
-        # With Gravity (Galaxy >= 22.01), logs are in the gravity state dir,
-        # not galaxy_root/main.log. Search for gravity log files in temp dirs.
-        for gravity_log in sorted(glob.glob("/tmp/tmp*/gravity/log/*.log")):
-            try:
-                with open(gravity_log) as f:
-                    contents = f.read()
-                if contents:
-                    print(f"Gravity log ({gravity_log}):")
-                    print(contents)
-                    found_any = True
-            except Exception:
-                pass
+
+        # With Gravity (Galaxy >= 22.01), logs are in the gravity state dir.
+        # Search temp dirs for gravity log directories.
+        tmpdir = tempfile.gettempdir()
+        gravity_glob = os.path.join(tmpdir, "tmp*", "gravity", "log", "*.log")
+        gravity_dirs_glob = os.path.join(tmpdir, "tmp*", "gravity")
+        gravity_dirs = sorted(glob.glob(gravity_dirs_glob))
+        _log(f"Searching for gravity logs: glob={gravity_glob}")
+        _log(f"Found {len(gravity_dirs)} gravity state dir(s): {gravity_dirs}")
+
+        for gravity_dir in gravity_dirs:
+            log_dir = os.path.join(gravity_dir, "log")
+            if os.path.isdir(log_dir):
+                log_files = sorted(os.listdir(log_dir))
+                _log(f"Log files in {log_dir}: {log_files}")
+                for log_name in log_files:
+                    log_file = os.path.join(log_dir, log_name)
+                    try:
+                        with open(log_file) as f:
+                            contents = f.read()
+                        if contents:
+                            _log(f"--- {log_file} ---")
+                            _log(contents)
+                            found_any = True
+                        else:
+                            _log(f"--- {log_file} (empty) ---")
+                    except Exception as e:
+                        _log(f"--- {log_file} (error: {e}) ---")
+            else:
+                _log(f"No log/ subdir in {gravity_dir}")
+
         if not found_any:
-            print(f"No Galaxy or Gravity log files found (checked {log_path} and /tmp/tmp*/gravity/log/)")
+            _log(f"No Galaxy or Gravity log contents found")
+
+        _log("=== End Galaxy log dump ===")
 
     @property
     def _user_gi(self):

@@ -2,6 +2,7 @@
 
 import contextlib
 import os
+import sys
 import time
 
 from planemo import (
@@ -51,7 +52,9 @@ def _serve(ctx, runnables, **kwds):
             action,
         )
         if exit_code:
-            message = "Problem running Galaxy command [%s]." % config.log_contents
+            log_contents = config.log_contents
+            _print_config_log_contents(config, log_contents)
+            message = "Problem running Galaxy command [%s]." % log_contents
             io.warn(message)
             raise Exception(message)
         host = kwds.get("host", "127.0.0.1")
@@ -61,6 +64,7 @@ def _serve(ctx, runnables, **kwds):
         galaxy_alive = sleep(galaxy_url, verbose=ctx.verbose, timeout=startup_timeout)
         if not galaxy_alive:
             log_contents = config.log_contents
+            _print_config_log_contents(config, log_contents)
             raise Exception(
                 f"Attempted to serve Galaxy at {galaxy_url}, but it failed to start in {startup_timeout} seconds."
                 f"\nGalaxy log contents:\n{log_contents}"
@@ -93,6 +97,24 @@ def serve_daemon(ctx, runnables=None, **kwds):
             config.kill()
             if not kwds.get("no_cleanup", False):
                 config.cleanup()
+
+
+def _print_config_log_contents(config, log_contents):
+    """Print Galaxy log contents to stderr for diagnostics.
+
+    This ensures logs are visible in CI even when pytest captures stdout
+    or the exception is caught by click's test runner.
+    """
+    gravity_state_dir = config.env.get("GRAVITY_STATE_DIR", "")
+    header = f"=== Galaxy startup failure (gravity_state_dir={gravity_state_dir}) ==="
+    sys.stderr.write(f"\n{header}\n")
+    if log_contents:
+        sys.stderr.write(log_contents)
+        sys.stderr.write("\n")
+    else:
+        sys.stderr.write("(no log contents found)\n")
+    sys.stderr.write(f"{'=' * len(header)}\n")
+    sys.stderr.flush()
 
 
 def sleep_for_serve():
