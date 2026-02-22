@@ -510,6 +510,7 @@ def write_galaxy_config(galaxy_root, properties, env, kwds, template_args, confi
                         "gunicorn": {
                             "bind": f"{kwds.get('host', 'localhost')}:{template_args['port']}",
                             "preload": False,
+                            "extra_args": "--no-control-socket",
                         },
                         "gx_it_proxy": {
                             "enable": False,
