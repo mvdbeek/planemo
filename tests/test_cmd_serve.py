@@ -177,6 +177,15 @@ class ServeTestCase(CliTestCase, UsesServeCommand):
         self._pid_file = os.path.join(self._home, "test.pid")
         self._serve_artifact = os.path.join(TEST_REPOS_DIR, "single_tool", "cat.xml")
 
+    def tearDown(self):
+        # Kill the Galaxy daemon process group before super().tearDown() runs
+        # cleanup hooks that may delete temp files the daemon still references.
+        # kill_pid_file sends SIGTERM/SIGKILL to the entire process group
+        # (gravity supervisor + gunicorn + workers), unlike kill_process_on_port
+        # which only SIGINTs the port listener and leaves gravity to respawn it.
+        kill_pid_file(self._pid_file)
+        super().tearDown()
+
     @skip_if_environ("PLANEMO_SKIP_GALAXY_TESTS")
     @mark.tests_galaxy_branch
     def test_serve(self):
