@@ -2,7 +2,6 @@
 
 import contextlib
 import os
-import sys
 import time
 
 from planemo import (
@@ -100,21 +99,26 @@ def serve_daemon(ctx, runnables=None, **kwds):
 
 
 def _print_config_log_contents(config, log_contents):
-    """Print Galaxy log contents to stderr for diagnostics.
+    """Print Galaxy log contents to fd 2 (stderr) for diagnostics.
 
-    This ensures logs are visible in CI even when pytest captures stdout
-    or the exception is caught by click's test runner.
+    Uses os.write(2, ...) to bypass click's CliRunner which globally
+    replaces sys.stderr during runner.invoke(). This code runs inside
+    click's invoke context, so sys.stderr points to click's buffer.
+    Writing to fd 2 directly ensures output reaches pytest's capture
+    or the real stderr.
     """
     gravity_state_dir = config.env.get("GRAVITY_STATE_DIR", "")
     header = f"=== Galaxy startup failure (gravity_state_dir={gravity_state_dir}) ==="
-    sys.stderr.write(f"\n{header}\n")
+
+    def _log(msg):
+        os.write(2, (msg + "\n").encode())
+
+    _log(f"\n{header}")
     if log_contents:
-        sys.stderr.write(log_contents)
-        sys.stderr.write("\n")
+        _log(log_contents)
     else:
-        sys.stderr.write("(no log contents found)\n")
-    sys.stderr.write(f"{'=' * len(header)}\n")
-    sys.stderr.flush()
+        _log("(no log contents found)")
+    _log("=" * len(header))
 
 
 def sleep_for_serve():

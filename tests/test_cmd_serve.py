@@ -93,16 +93,17 @@ class UsesServeCommand:
     def _print_galaxy_logs(self):
         """Print Galaxy/Gravity log files for debugging startup failures.
 
-        Writes to stderr to ensure output is visible in CI even when
-        pytest captures stdout.
+        Writes directly to fd 2 (stderr) using os.write() to bypass
+        click's CliRunner which globally replaces sys.stderr during
+        runner.invoke(). The target thread's runner.invoke() is still
+        running when this is called from the main thread, so sys.stderr
+        points to click's buffer which gets discarded.
         """
         import glob
-        import sys
         import tempfile
 
         def _log(msg):
-            sys.stderr.write(msg + "\n")
-            sys.stderr.flush()
+            os.write(2, (msg + "\n").encode())
 
         _log(f"\n=== Galaxy log dump (galaxy_root={self.galaxy_root}) ===")
 
