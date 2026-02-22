@@ -5,18 +5,15 @@ import tempfile
 import time
 import uuid
 
-import psutil
 import requests
 
 from planemo import network_util
 from planemo.galaxy import api
-from planemo.io import (
-    kill_pid_file,
-    kill_posix,
-)
+from planemo.io import kill_pid_file
 from .test_utils import (
     cli_daemon_galaxy,
     CliTestCase,
+    kill_process_on_port,
     launch_and_wait_for_galaxy,
     mark,
     PROJECT_TEMPLATES_DIR,
@@ -184,18 +181,14 @@ class ServeTestCase(CliTestCase, UsesServeCommand):
     def tearDown(self):
         # Kill ALL Galaxy processes before super().tearDown() runs cleanup
         # hooks that delete temp files the daemon still references.
-        # kill_pid_file kills the gravity supervisor's process group, but
+        # kill_pid_file kills gravity's process group via os.killpg, but
         # gunicorn may be in a separate process group (gravity uses setsid).
-        # So also find the process listening on the port and kill its entire
-        # process group with SIGTERM/SIGKILL via kill_posix.
+        # kill_process_on_port sends SIGINT to the individual port listener
+        # (gunicorn master), which triggers a quick shutdown of all workers.
+        # Both must complete before cleanup hooks delete temp files.
         kill_pid_file(self._pid_file)
-        for proc in psutil.process_iter():
-            try:
-                for conn in proc.connections(kind="inet"):
-                    if conn.laddr.port == self._port:
-                        kill_posix(proc.pid)
-            except Exception:
-                pass
+        kill_process_on_port(self._port)
+        time.sleep(2)
         super().tearDown()
 
     @skip_if_environ("PLANEMO_SKIP_GALAXY_TESTS")
