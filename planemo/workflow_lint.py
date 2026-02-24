@@ -512,6 +512,21 @@ def find_workflow_descriptions(directory: str) -> Iterator[str]:
             yield potential_workflow_artifact_path
 
 
+def load_workflow_readme(workflow_path: str, workflow: Dict[str, Any]) -> None:
+    """Read a README.md from the workflow's directory into the workflow dict if readme is empty.
+
+    If the workflow dict does not have a ``readme`` key or its value is falsy,
+    look for a ``README.md`` file next to the workflow file and, if found,
+    populate ``workflow["readme"]`` with its contents.
+    """
+    if workflow.get("readme"):
+        return
+    readme_path = os.path.join(os.path.dirname(workflow_path), "README.md")
+    if os.path.exists(readme_path):
+        with open(readme_path) as fh:
+            workflow["readme"] = fh.read()
+
+
 def find_potential_workflow_files(directory: str) -> List[str]:
     """Return a list of potential workflow files in a directory."""
     if not os.path.exists(directory):

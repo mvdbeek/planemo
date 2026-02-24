@@ -9,7 +9,10 @@ from gxformat2.yaml import ordered_load_path
 from planemo import options
 from planemo.cli import command_function
 from planemo.github_util import create_release
-from planemo.workflow_lint import find_workflow_descriptions
+from planemo.workflow_lint import (
+    find_workflow_descriptions,
+    load_workflow_readme,
+)
 
 
 @click.command("workflow_upload")
@@ -31,6 +34,7 @@ def cli(ctx, paths, namespace, dry_run, github_branch, **kwds):
         versions = defaultdict(list)
         for workflow_file in find_workflow_descriptions(path):
             workflow = ordered_load_path(workflow_file)
+            load_workflow_readme(workflow_file, workflow)
             version = workflow.get("release")
             if not version:
                 raise Exception(f"Must set a release version in workflow file '{workflow_file}'")
