@@ -25,6 +25,8 @@ from typing import (
     TYPE_CHECKING,
 )
 
+import yaml
+
 from cryptography.fernet import Fernet
 from galaxy.tool_util.deps import docker_util
 from galaxy.util.commands import argv_to_str
@@ -1399,6 +1401,12 @@ def _handle_job_config_file(
         )
         init_config = ConfigArgs.from_dict(**kwds)
         conf_contents = build_job_config(init_config, dev_context)
+        job_workers = kwds.get("job_workers")
+        if job_workers is not None:
+            job_conf = yaml.safe_load(conf_contents)
+            if "runners" in job_conf and "local" in job_conf["runners"]:
+                job_conf["runners"]["local"]["workers"] = job_workers
+            conf_contents = yaml.dump(job_conf, default_flow_style=False)
         job_config_file = os.path.join(
             config_directory,
             "job_conf.yml",
