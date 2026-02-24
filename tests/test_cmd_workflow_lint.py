@@ -253,6 +253,7 @@ class CmdWorkflowLintTestCase(CliTestCase):
                 ".dockstore.yml workflow entry missing recommended key name",
                 "Workflow  have no 'authors' in the .dockstore.yml.",
                 "has no release",
+                "has no readme field set",
             ]
 
             for error in errors:
@@ -263,7 +264,7 @@ class CmdWorkflowLintTestCase(CliTestCase):
             "workflow_lint",
             "--iwc",
             "--skip",
-            "best_practices,required_files,dockstore_best_practices,release",
+            "best_practices,required_files,dockstore_best_practices,release,readme",
             repo,
         ]
         self._check_exit_code(lint_cmd, exit_code=0)
@@ -278,8 +279,8 @@ class CmdWorkflowLintTestCase(CliTestCase):
         for error in errors:
             assert error in result.output
 
-        # Check that skipping the good steps makes it work
-        lint_cmd = ["workflow_lint", "--iwc", "--skip", "release", repo]
+        # Check that skipping the good steps makes it work (also skip readme since test workflow lacks it)
+        lint_cmd = ["workflow_lint", "--iwc", "--skip", "release,readme", repo]
         self._check_exit_code(lint_cmd, exit_code=0)
 
 

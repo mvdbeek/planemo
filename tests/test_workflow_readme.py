@@ -51,3 +51,16 @@ def test_load_workflow_readme_empty_string_readme():
         workflow = {"readme": ""}
         load_workflow_readme(workflow_path, workflow)
         assert workflow["readme"] == "# Content\n"
+
+
+def test_load_workflow_readme_force_overwrites():
+    with temp_directory() as test_dir:
+        workflow_path = os.path.join(test_dir, "workflow.gxwf.yml")
+        readme_path = os.path.join(test_dir, "README.md")
+        with open(workflow_path, "w") as f:
+            f.write("")
+        with open(readme_path, "w") as f:
+            f.write("# Updated\n")
+        workflow = {"readme": "Old content"}
+        load_workflow_readme(workflow_path, workflow, force=True)
+        assert workflow["readme"] == "# Updated\n"

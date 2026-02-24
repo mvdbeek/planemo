@@ -169,6 +169,7 @@ def _lint_workflow_artifacts_on_path(lint_context: WorkflowLintContext, path: st
             lint_context.lint("lint_structure", structure, potential_workflow_artifact_path)
             if lint_args["iwc_grade"]:
                 lint_context.lint("lint_release", _lint_release, potential_workflow_artifact_path)
+                lint_context.lint("lint_readme", _lint_readme, potential_workflow_artifact_path)
             lint_context.lint("lint_best_practices", _lint_best_practices, potential_workflow_artifact_path)
             lint_context.lint("lint_tests", _lint_tsts, potential_workflow_artifact_path)
             lint_context.lint("lint_tool_ids", _lint_tool_ids, potential_workflow_artifact_path)
@@ -512,14 +513,16 @@ def find_workflow_descriptions(directory: str) -> Iterator[str]:
             yield potential_workflow_artifact_path
 
 
-def load_workflow_readme(workflow_path: str, workflow: Dict[str, Any]) -> None:
+def load_workflow_readme(workflow_path: str, workflow: Dict[str, Any], force: bool = False) -> None:
     """Read a README.md from the workflow's directory into the workflow dict if readme is empty.
 
     If the workflow dict does not have a ``readme`` key or its value is falsy,
     look for a ``README.md`` file next to the workflow file and, if found,
     populate ``workflow["readme"]`` with its contents.
+
+    If ``force`` is True, overwrite any existing readme value.
     """
-    if workflow.get("readme"):
+    if workflow.get("readme") and not force:
         return
     readme_path = os.path.join(os.path.dirname(workflow_path), "README.md")
     if os.path.exists(readme_path):
@@ -651,6 +654,16 @@ def _lint_release(path, lint_context):
         version = _get_changelog_version(os.path.dirname(path))
         if version != "" and workflow_dict.get("release") != version:
             lint_context.error(f"The release of workflow {path} does not match the version in the CHANGELOG.")
+
+
+def _lint_readme(path: str, lint_context: WorkflowLintContext) -> None:
+    with open(path) as f:
+        workflow_dict = ordered_load(f)
+    if not workflow_dict.get("readme"):
+        lint_context.error(
+            f"The workflow {path} has no readme field set. "
+            "Use 'planemo workflow_fill_readme' to populate it from a README.md file."
+        )
 
 
 def _lint_dockstore_config_best_practices(path: str, lint_context: WorkflowLintContext) -> None:
