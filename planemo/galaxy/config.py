@@ -36,7 +36,10 @@ from gxjobconfinit.generate import (
 )
 from packaging.version import parse as parse_version
 
-from planemo import git
+from planemo import (
+    git,
+    network_util,
+)
 from planemo.config import OptionSource
 from planemo.database import postgres_singularity
 from planemo.deps import ensure_dependency_resolvers_conf_configured
@@ -500,6 +503,23 @@ def write_galaxy_config(galaxy_root, properties, env, kwds, template_args, confi
         env["GRAVITY_STATE_DIR"] = config_join("gravity")
         with NamedTemporaryFile(suffix=".sock", delete=True) as nt:
             env["SUPERVISORD_SOCKET"] = nt.name
+        host = kwds.get("host", "localhost")
+        port = template_args["port"]
+        galaxy_infrastructure_url = f"http://{host}:{port}"
+        if kwds.get("disable_gxits"):
+            gx_it_proxy_config = {
+                "enable": False,
+            }
+        else:
+            gx_it_proxy_port = network_util.get_free_port()
+            gx_it_proxy_config = {
+                "enable": True,
+                "port": gx_it_proxy_port,
+            }
+            properties["interactivetools_enable"] = True
+            properties["galaxy_infrastructure_url"] = galaxy_infrastructure_url
+            properties["interactivetools_upstream_proxy"] = False
+            properties["interactivetools_proxy_host"] = f"{host}:{gx_it_proxy_port}"
         write_file(
             env["GALAXY_CONFIG_FILE"],
             json.dumps(
@@ -508,12 +528,10 @@ def write_galaxy_config(galaxy_root, properties, env, kwds, template_args, confi
                     "gravity": {
                         "galaxy_root": galaxy_root,
                         "gunicorn": {
-                            "bind": f"{kwds.get('host', 'localhost')}:{template_args['port']}",
+                            "bind": f"{host}:{port}",
                             "preload": False,
                         },
-                        "gx_it_proxy": {
-                            "enable": False,
-                        },
+                        "gx_it_proxy": gx_it_proxy_config,
                     },
                 }
             ),
