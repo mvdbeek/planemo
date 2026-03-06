@@ -361,6 +361,24 @@ def _execute(  # noqa C901
     return run_response
 
 
+def _unhide_workflow_outputs(ctx, user_gi, invocation_id, history_id):
+    """Ensure workflow output datasets are visible.
+
+    Some tools like pick_value can produce hidden outputs when they pick from
+    hidden intermediate datasets. Workflow outputs should always be visible.
+    """
+    try:
+        invocation = user_gi.invocations.show_invocation(invocation_id)
+        for output in invocation.get("outputs", {}).values():
+            if output.get("src") == "hda":
+                dataset = user_gi.histories.show_dataset(history_id, output["id"])
+                if not dataset.get("visible", True):
+                    ctx.vlog(f"Unhiding workflow output dataset [{output['id']}]")
+                    user_gi.histories.update_dataset(history_id, output["id"], visible=True)
+    except Exception as e:
+        ctx.vlog(f"Failed to unhide workflow outputs: {e}")
+
+
 def invocation_to_run_response(
     ctx,
     user_gi,
@@ -396,6 +414,9 @@ def invocation_to_run_response(
         final_invocation_state = invocation["state"]
         job_state = None
         error_message = None
+
+    if not no_wait:
+        _unhide_workflow_outputs(ctx, user_gi, invocation_id, history_id)
 
     return GalaxyWorkflowRunResponse(
         ctx,

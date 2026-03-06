@@ -146,6 +146,22 @@ def test_galaxy_workflow_non_data_inputs():
 
 @skip_if_environ("PLANEMO_SKIP_GALAXY_TESTS")
 @mark.tests_galaxy_branch
+def test_galaxy_workflow_pick_value_hidden_output():
+    ctx = create_test_context()
+    test_artifact = os.path.join(TEST_DATA_DIR, "wf_pick_value_hidden.gxwf.yml")
+    runnables = for_paths([test_artifact])
+    kwds = {
+        "engine": "galaxy",
+        "no_dependency_resolution": True,
+        "paste_test_data_paths": False,
+        "galaxy_branch": target_galaxy_branch(),
+    }
+    exit_code = t_runnables(ctx, runnables, **kwds)
+    assert exit_code == 0
+
+
+@skip_if_environ("PLANEMO_SKIP_GALAXY_TESTS")
+@mark.tests_galaxy_branch
 def test_galaxy_workflow_step_failed():
     ctx = create_test_context()
     test_artifact = os.path.join(TEST_DATA_DIR, "wf_failed_step.ga")

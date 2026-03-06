@@ -1,0 +1,39 @@
+class: GalaxyWorkflow
+name: "Test pick_value with hidden inputs"
+inputs:
+  input1:
+    type: File
+outputs:
+  picked_output:
+    outputSource: pick/data_param
+steps:
+  first_cat:
+    tool_id: cat1
+    in:
+      input1: input1
+  second_cat:
+    tool_id: cat1
+    in:
+      input1: input1
+  pick:
+    tool_id: pick_value
+    tool_version: 0.1.0
+    tool_state:
+      style_cond:
+        __current_case__: 0
+        pick_style: first
+        type_cond:
+          __current_case__: 0
+          param_type: data
+          pick_from:
+          - __index__: 0
+            value:
+              __class__: ConnectedValue
+          - __index__: 1
+            value:
+              __class__: ConnectedValue
+    in:
+      style_cond|type_cond|pick_from_0|value:
+        source: first_cat/out_file1
+      style_cond|type_cond|pick_from_1|value:
+        source: second_cat/out_file1

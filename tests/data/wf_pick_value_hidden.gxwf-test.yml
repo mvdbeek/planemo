@@ -1,0 +1,10 @@
+- doc: Test that pick_value output is not hidden when picking from hidden inputs
+  job:
+    input1:
+      class: File
+      path: '1.bed'
+  outputs:
+    picked_output:
+      asserts:
+        has_n_lines:
+          n: 65
