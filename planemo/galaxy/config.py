@@ -1096,11 +1096,19 @@ class LocalGalaxyConfig(BaseManagedGalaxyConfig):
                 with open(self.pid_file) as f:
                     print(f"pid_file contents are [{f.read()}]")
         if self.env.get("GRAVITY_STATE_DIR"):
-            stop_gravity(
-                virtual_env=self.virtual_env_dir or os.path.join(self.galaxy_root, ".venv"),
-                gravity_state_dir=self.gravity_state_dir,
-                env=self.env,
-            )
+            venv = self.virtual_env_dir or os.path.join(self.galaxy_root, ".venv")
+            try:
+                stop_gravity(
+                    virtual_env=venv,
+                    gravity_state_dir=self.gravity_state_dir,
+                    env=self.env,
+                )
+            except Exception:
+                import traceback
+
+                warn(f"Failed to stop Galaxy via gravity, virtual_env: {venv}")
+                traceback.print_exc()
+                _log_venv_diagnostics(venv)
         kill_pid_file(self.pid_file)
 
     def startup_command(self, ctx, **kwds):
@@ -1150,6 +1158,37 @@ class LocalGalaxyConfig(BaseManagedGalaxyConfig):
         # If Planemo started a local, native Galaxy instance assume files URLs can be
         # pasted.
         return self.user_is_admin
+
+
+def _log_venv_diagnostics(virtual_env):
+    """Log diagnostic info about virtualenv state when galaxyctl is missing."""
+    import glob
+    import subprocess as sp
+
+    bin_dir = os.path.join(virtual_env, "bin")
+    if not os.path.isdir(bin_dir):
+        warn(f"  Virtual env bin dir does not exist: {bin_dir}")
+        return
+    galaxy_bins = sorted(
+        glob.glob(os.path.join(bin_dir, "galaxy*")) + glob.glob(os.path.join(bin_dir, "gravity*"))
+    )
+    warn(f"  Galaxy/gravity binaries in {bin_dir}: {galaxy_bins}")
+    python_bin = os.path.join(bin_dir, "python")
+    if os.path.exists(python_bin):
+        try:
+            result = sp.run(
+                [python_bin, "-m", "pip", "show", "gravity"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            warn(f"  pip show gravity stdout: {result.stdout.strip()}")
+            if result.stderr.strip():
+                warn(f"  pip show gravity stderr: {result.stderr.strip()}")
+        except Exception as e:
+            warn(f"  Failed to query pip for gravity: {e}")
+    else:
+        warn(f"  Python binary not found at {python_bin}")
 
 
 def _database_connection(database_location, **kwds):

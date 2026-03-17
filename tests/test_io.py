@@ -2,6 +2,8 @@
 
 import tempfile
 
+import pytest
+
 from planemo import io
 from .test_utils import assert_equal
 
@@ -44,3 +46,9 @@ def test_filter_paths():
         tmp.write("#exclude c\n\nc\n")
         tmp.flush()
         assert_filtered_is(["/a/b/c", "/a/b/d"], ["/a/b/d"], exclude_from=[tmp.name])
+
+
+def test_stop_gravity_missing_binary():
+    """Test stop_gravity raises FileNotFoundError for missing galaxyctl binary."""
+    with pytest.raises(FileNotFoundError):
+        io.stop_gravity("/nonexistent/venv", "/tmp/gravity_state", {})
