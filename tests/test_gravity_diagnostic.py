@@ -175,51 +175,65 @@ class TestGravityWithGalaxyDeps:
 
 
 @DIAG_SKIP
-class TestVenvDirResolution:
-    """Test that virtual_env_dir resolution matches what the shell commands do."""
+class TestGravityWithUv:
+    """Test galaxyctl survival when uv is used instead of pip.
 
-    def test_dot_venv_created_by_galaxy(self, tmp_path):
-        """Check if Galaxy startup creates a .venv that could confuse virtual_env_dir.
+    Galaxy's common_startup.sh uses uv if available:
+      if command -v uv >/dev/null; then PIP_CMD="$(command -v uv) pip"
+    """
 
-        If Galaxy's run.sh or common_startup.sh creates a .venv directory
-        inside galaxy_root, virtual_env_dir might return that instead of
-        the shared venv path.
+    def test_galaxyctl_survives_uv_install(self, tmp_path):
+        """Check if galaxyctl survives when gravity is installed via uv pip."""
+        import shutil
+
+        uv_bin = shutil.which("uv")
+        if not uv_bin:
+            pytest.skip("uv not available")
+
+        venv = _create_venv(tmp_path / "venv")
+        # Install gravity with uv pip (as Galaxy's common_startup.sh would)
+        env = os.environ.copy()
+        env["VIRTUAL_ENV"] = venv
+        result = subprocess.run(
+            [uv_bin, "pip", "install", "gravity"],
+            capture_output=True, text=True, timeout=300, env=env,
+        )
+        galaxyctl = _galaxyctl_path(venv)
+        assert os.path.exists(galaxyctl), (
+            f"galaxyctl not found after uv pip install.\n"
+            f"Bins: {_galaxy_bins(venv)}\n"
+            f"uv output: {result.stdout[-500:]}\n"
+            f"uv stderr: {result.stderr[-500:]}"
+        )
+
+    def test_galaxyctl_survives_uv_then_pip_reinstall(self, tmp_path):
+        """Check if galaxyctl survives mixed uv/pip usage.
+
+        common_startup.sh may install with uv, but planemo's
+        _install_with_command may use pip. Check for conflicts.
         """
-        galaxy_root = tmp_path / "galaxy-dev"
-        galaxy_root.mkdir()
-        shared_venv = tmp_path / "shared_venv"
-        shared_venv.mkdir()
+        import shutil
 
-        # Simulate _virtual_env_locs = [".venv", shared_venv_path]
-        virtual_env_locs = [".venv", str(shared_venv)]
+        uv_bin = shutil.which("uv")
+        if not uv_bin:
+            pytest.skip("uv not available")
 
-        # Before any .venv exists: should resolve to shared_venv
-        resolved = None
-        for loc in virtual_env_locs:
-            if not os.path.isabs(loc):
-                loc = os.path.join(str(galaxy_root), loc)
-            if os.path.isdir(loc):
-                resolved = loc
-                break
+        venv = _create_venv(tmp_path / "venv")
+        env = os.environ.copy()
+        env["VIRTUAL_ENV"] = venv
 
-        assert resolved == str(shared_venv), f"Expected shared_venv, got {resolved}"
+        # First install with uv (as Galaxy would)
+        subprocess.run(
+            [uv_bin, "pip", "install", "gravity"],
+            capture_output=True, text=True, timeout=300, env=env,
+        )
+        galaxyctl = _galaxyctl_path(venv)
+        assert os.path.exists(galaxyctl), "galaxyctl not installed via uv"
 
-        # Now simulate Galaxy creating a .venv dir
-        dot_venv = galaxy_root / ".venv"
-        dot_venv.mkdir()
-
-        resolved = None
-        for loc in virtual_env_locs:
-            if not os.path.isabs(loc):
-                loc = os.path.join(str(galaxy_root), loc)
-            if os.path.isdir(loc):
-                resolved = loc
-                break
-
-        # If .venv exists, it takes priority! This could be the bug.
-        if resolved != str(shared_venv):
-            pytest.fail(
-                f"virtual_env_dir resolved to {resolved} instead of {shared_venv}.\n"
-                f"If Galaxy creates a .venv dir, virtual_env_dir returns the WRONG path!\n"
-                f"galaxyctl would be in {shared_venv}/bin/ but planemo looks in {resolved}/bin/"
-            )
+        # Then reinstall with regular pip (as a second common_startup.sh run might)
+        result = _pip(venv, "install", "--force-reinstall", "gravity")
+        assert os.path.exists(galaxyctl), (
+            f"galaxyctl disappeared after pip reinstall over uv install!\n"
+            f"Bins: {_galaxy_bins(venv)}\n"
+            f"pip stderr: {result.stderr[-500:]}"
+        )
