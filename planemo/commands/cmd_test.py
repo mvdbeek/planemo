@@ -37,6 +37,12 @@ from planemo.runnable_resolve import for_runnable_identifiers
     "instances to limit generated traffic.",
     default="0",
 )
+@click.option(
+    "--use_async_submission/--no_use_async_submission",
+    default=False,
+    help="Submit tool jobs via POST /api/jobs (async, Celery-backed) instead of the "
+    "legacy POST /api/tools endpoint.",
+)
 @options.galaxy_target_options()
 @options.galaxy_config_options()
 @options.test_options()

@@ -117,6 +117,7 @@ class GalaxyEngine(BaseEngine, metaclass=abc.ABCMeta):
                             # and capture the output information somehow.
                             interactor.VERBOSE_GALAXY_ERRORS = True
 
+                        use_legacy_api = "never" if self._kwds.get("use_async_submission") else "always"
                         interactor.verify_tool(
                             tool_id,
                             galaxy_interactor,
@@ -125,6 +126,7 @@ class GalaxyEngine(BaseEngine, metaclass=abc.ABCMeta):
                             register_job_data=_register_job_data,
                             maxseconds=test_timeout,
                             quiet=not verbose,
+                            use_legacy_api=use_legacy_api,
                         )
                     except Exception:
                         pass
