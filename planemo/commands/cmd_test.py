@@ -39,7 +39,7 @@ from planemo.runnable_resolve import for_runnable_identifiers
 )
 @click.option(
     "--use_async_submission/--no_use_async_submission",
-    default=False,
+    default=True,
     help="Submit tool jobs via POST /api/jobs (async, Celery-backed) instead of the "
     "legacy POST /api/tools endpoint.",
 )
