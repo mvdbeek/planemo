@@ -97,11 +97,43 @@ def test_configured_paths_are_validated(cli_context, source, path_type, value):
     assert "Invalid value for '--path'" in result.output
     # The user did not pass the value, so the message must say where it came from.
     expected_source = {
-        "global_config": f"global config file {cli_context.planemo_config}",
+        "global_config": f"key 'default_path' in the global config file {cli_context.planemo_config}",
         "default": "the option's default",
         "profile": "profile 'example'",
     }[source]
     assert "not passed on the command line" in result.output
+    assert expected_source in result.output
+
+
+def test_error_names_legacy_config_key(cli_context):
+    result = _invoke(
+        cli_context,
+        planemo_option(
+            "--path", type=click.Path(exists=True), use_global_config=True, extra_global_config_vars=["legacy_path"]
+        ),
+        config={"legacy_path": "missing"},
+    )
+    assert result.exit_code == 2, result.output
+    assert f"key 'legacy_path' in the global config file {cli_context.planemo_config}" in result.output
+
+
+@pytest.mark.parametrize("source", ["global_config", "profile"])
+@pytest.mark.parametrize("value", [5, ["first", "second"], {"first": 1}])
+def test_wrongly_typed_configured_path(cli_context, source, value):
+    # YAML and JSON can hold values Click's parser never produces; click.Path
+    # rejects these with TypeError rather than BadParameter.
+    result = _invoke(
+        cli_context,
+        planemo_option("--path", type=click.Path(resolve_path=True), use_global_config=True),
+        config={"default_path": value} if source == "global_config" else {},
+        profile={"path": value} if source == "profile" else None,
+    )
+    assert result.exit_code == 2, result.output
+    assert f"Invalid value for '--path': {value!r} is not a valid path" in result.output
+    expected_source = {
+        "global_config": "key 'default_path' in the global config file",
+        "profile": "profile 'example'",
+    }[source]
     assert expected_source in result.output
 
 

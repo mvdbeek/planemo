@@ -37,12 +37,13 @@ def _default_callback(
     def callback(ctx, param, value):
         planemo_ctx = ctx.obj
         param_name = param.name
+        config_key = None
         # Click represents an omitted repeatable/multi-value option as ().
         if value is not None and not ((param.multiple or param.nargs != 1) and value == ()):
             result = value
             option_source = OptionSource.cli
         else:
-            result, option_source = _find_default(
+            result, option_source, config_key = _find_default(
                 planemo_ctx,
                 param,
                 use_global_config=use_global_config,
@@ -58,7 +59,8 @@ def _default_callback(
 
         if option_source is not OptionSource.cli:
             if option_source is OptionSource.global_config:
-                source = f"the global config file {global_config_path(planemo_ctx.planemo_config)}"
+                config_path = global_config_path(planemo_ctx.planemo_config)
+                source = f"key '{config_key}' in the global config file {config_path}"
             else:
                 source = "the option's default"
             result = convert_option_value(ctx, param, result, source)
@@ -77,26 +79,33 @@ def convert_option_value(ctx: click.Context, param: Option, value: Any, source: 
     """
     if param.multiple and isinstance(value, str):
         value = (value,)
+    source_hint = f" (this value was not passed on the command line, it was taken from {source})" if source else ""
     try:
         return param.type_cast_value(ctx, value)
     except click.BadParameter as e:
-        if source:
-            e.message = f"{e.message} (this value was not passed on the command line, it was taken from {source})"
-        raise
+        if not source_hint:
+            raise
+        raise click.BadParameter(f"{e.message}{source_hint}", ctx=e.ctx, param=e.param, param_hint=e.param_hint) from e
+    except (TypeError, ValueError) as e:
+        # Click's parser only hands strings to a type, but YAML and JSON can
+        # supply numbers, lists or mappings, which some types (click.Path for
+        # one) reject with a plain Python error instead of BadParameter.
+        message = f"{value!r} is not a valid {param.type.name}: {e}.{source_hint}"
+        raise click.BadParameter(message, ctx=ctx, param=param) from e
 
 
 def _find_default(
     ctx: "PlanemoCliContext", param: Option, use_global_config: bool, extra_global_config_vars: List[str]
-) -> Union[Tuple[Any, OptionSource], Tuple[object, None]]:
+) -> Union[Tuple[Any, OptionSource, str], Tuple[object, None, None]]:
     if use_global_config:
         global_config = ctx.global_config
         global_config_keys = [f"default_{param.name}"] + extra_global_config_vars
         for global_config_key in global_config_keys:
             if global_config_key in global_config:
                 default_value = global_config[global_config_key]
-                return default_value, OptionSource.global_config
+                return default_value, OptionSource.global_config, global_config_key
 
-    return VALUE_UNSET, None
+    return VALUE_UNSET, None, None
 
 
 def planemo_option(*args, **kwargs) -> Callable:
