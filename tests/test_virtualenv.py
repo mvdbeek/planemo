@@ -1,6 +1,7 @@
 """Tests for Planemo's Galaxy virtualenv selection."""
 
 import os
+import subprocess
 import sys
 from unittest.mock import (
     call,
@@ -8,6 +9,7 @@ from unittest.mock import (
 )
 
 from planemo import virtualenv
+from planemo.galaxy.run import CREATE_COMMAND_TEMPLATE
 
 
 def test_galaxy_python_versions_are_explicit_and_current():
@@ -46,24 +48,49 @@ def test_create_command_honors_explicit_python_version():
     assert which.call_args_list == [call("python3.10"), call("virtualenv")]
 
 
-def test_create_command_warns_when_falling_back_to_planemo_python(capsys):
+def _run_create_template(create_command, virtualenv_path):
+    script = CREATE_COMMAND_TEMPLATE.safe_substitute(create_virtualenv=create_command)
+    env = dict(os.environ, GALAXY_VIRTUAL_ENV=str(virtualenv_path))
+    return subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True, check=True)
+
+
+def _fallback_create_command():
+    # ``true`` stands in for Planemo's interpreter so running the command creates nothing.
     with (
         patch.object(virtualenv, "which", side_effect=[None, None]),
-        patch.object(virtualenv.sys, "executable", "/opt/planemo/bin/python"),
+        patch.object(virtualenv.sys, "executable", "true"),
     ):
-        command = virtualenv.create_command("/tmp/galaxy-venv", "3.14")
-
-    assert command == "/opt/planemo/bin/python -m venv /tmp/galaxy-venv"
-    err = capsys.readouterr().err
-    assert "python3.14 was not found on PATH" in err
-    assert "Planemo's own interpreter (python %d.%d)" % sys.version_info[:2] in err
+        return virtualenv.create_command("$GALAXY_VIRTUAL_ENV", "3.14")
 
 
-def test_create_command_does_not_warn_when_python_found(capsys):
-    with patch.object(virtualenv, "which", side_effect=["/opt/python3.10", None]):
-        virtualenv.create_command("/tmp/galaxy-venv", "3.10")
+def test_create_command_defers_fallback_warning_to_the_shell(capsys):
+    command = _fallback_create_command()
 
+    assert command.endswith(" && true -m venv $GALAXY_VIRTUAL_ENV")
+    # Nothing is printed while building the command, only when it runs.
     assert capsys.readouterr().err == ""
+
+
+def test_fallback_warning_only_shown_when_virtualenv_is_created(tmp_path):
+    command = _fallback_create_command()
+    expected = "python3.14 was not found on PATH, creating the Galaxy virtualenv with Planemo's own interpreter"
+
+    missing = _run_create_template(command, tmp_path / "missing")
+    assert expected in missing.stderr
+    assert "Created virtualenv" in missing.stdout
+
+    existing = tmp_path / "existing"
+    existing.mkdir()
+    result = _run_create_template(command, existing)
+    assert result.stderr == ""
+    assert result.stdout == ""
+
+
+def test_create_command_does_not_warn_when_python_found():
+    with patch.object(virtualenv, "which", side_effect=["/opt/python3.10", None]):
+        command = virtualenv.create_command("/tmp/galaxy-venv", "3.10")
+
+    assert command == "/opt/python3.10 -m venv /tmp/galaxy-venv"
 
 
 def test_resolve_python_names_interpreter_actually_used():

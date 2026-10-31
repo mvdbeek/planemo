@@ -11,6 +11,7 @@ import requests
 from planemo import network_util
 from planemo.galaxy import api
 from planemo.io import kill_pid_file
+from planemo.virtualenv import GALAXY_PYTHON_VERSION_CHOICES
 from .test_utils import (
     cli_daemon_galaxy,
     CliTestCase,
@@ -134,6 +135,10 @@ class ServeTestCase(CliTestCase, UsesServeCommand):
     @skip_if_environ("PLANEMO_SKIP_GALAXY_TESTS")
     @skip_if_environ("PLANEMO_SKIP_GALAXY_CLIENT_TESTS")
     @skip_unless_executable(f"python{PYTHON_VERSION}")
+    @mark.skipif(
+        PYTHON_VERSION not in GALAXY_PYTHON_VERSION_CHOICES,
+        reason=f"--galaxy_python_version does not accept {PYTHON_VERSION}",
+    )
     def test_serve_client_explicit_python_version(self):
         extra_args = ["--galaxy_python_version", PYTHON_VERSION]
         # Given the client build - give this more time.
