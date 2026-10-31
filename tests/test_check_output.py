@@ -76,9 +76,7 @@ def test_collection_expected_but_output_is_dataset():
         {"path": "out.txt", "id": "abc"},
         {"name": "out", "class": "Collection", "collection_type": "list", "element_tests": {}},
     )
-    assert len(problems) == 1
-    assert "expected to be a collection" in problems[0]
-    assert "out" in problems[0]
+    assert problems == ["Output 'out' is expected to be a collection but has no 'elements' (is it a dataset?)."]
 
 
 def test_class_only_collection_expected_but_output_is_dataset():
@@ -96,4 +94,4 @@ def test_collection_without_collection_type_reports_missing_key():
         {"elements": []},
         {"name": "out", "class": "Collection", "collection_type": "list"},
     )
-    assert problems == ["Output 'out' is expected to be a collection but has no 'collection_type' (is it a dataset?)."]
+    assert problems == ["Output 'out' is expected to be a collection of type [list] but reports no 'collection_type'."]

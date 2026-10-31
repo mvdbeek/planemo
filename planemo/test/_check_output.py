@@ -33,10 +33,15 @@ def _check_output_collection(runnable, output_properties, test_properties, **kwd
 
     output_def = TestCollectionOutputDef.from_yaml_test_format(test_properties)
 
-    required_keys = ("collection_type", "elements") if output_def.collection_type else ("elements",)
-    for key in required_keys:
-        if key not in data_collection:
-            return [f"Output '{output_def.name}' is expected to be a collection but has no '{key}' (is it a dataset?)."]
+    # Check the shape up front: galaxy-tool-util < 26.1 indexes these keys directly and
+    # raises KeyError instead of AssertionError when they are missing.
+    if "elements" not in data_collection:
+        return [f"Output '{output_def.name}' is expected to be a collection but has no 'elements' (is it a dataset?)."]
+    if output_def.collection_type and "collection_type" not in data_collection:
+        return [
+            f"Output '{output_def.name}' is expected to be a collection of type [{output_def.collection_type}] "
+            "but reports no 'collection_type'."
+        ]
 
     def verify_dataset(element, element_attrib, element_outfile):
         if element_outfile:
