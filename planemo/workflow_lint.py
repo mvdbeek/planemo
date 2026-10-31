@@ -46,6 +46,7 @@ from planemo.runnable import (
     TestCase,
 )
 from planemo.shed import DOCKSTORE_REGISTRY_CONF
+from planemo.test import for_collections
 
 if TYPE_CHECKING:
     from planemo.cli import PlanemoCliContext
@@ -292,16 +293,34 @@ def is_valid_output_expectations(lint_context, output_expectations):
     if isinstance(output_expectations, (int, str, float, bool)):
         # CWL style parameter output
         return True
-    elif "element_tests" in output_expectations:
-        # This is a collection
-        for element_id in output_expectations["element_tests"]:
-            all_assertion_definitions.append(output_expectations["element_tests"][element_id].get("asserts"))
+    elif for_collections(output_expectations):
+        all_assertion_definitions.extend(_collection_assertion_definitions(output_expectations))
     else:
         all_assertion_definitions.append(output_expectations.get("asserts"))
     for assertion_definitions in all_assertion_definitions:
         if not _check_test_assertions(lint_context, assertion_definitions):
             return False
     return True
+
+
+def _element_tests(expectations: Dict[str, Any]) -> Dict[str, Any]:
+    # "element_tests" is the preferred key, "elements" its alias - at the top level and for
+    # nested collection elements alike (mirrors galaxy-tool-util's resolve_element_tests,
+    # which is not available in all supported galaxy-tool-util versions).
+    element_tests = expectations.get("element_tests")
+    if element_tests is None:
+        element_tests = expectations.get("elements")
+    return element_tests if isinstance(element_tests, dict) else {}
+
+
+def _collection_assertion_definitions(expectations: Dict[str, Any]) -> List[Optional[Dict[str, Any]]]:
+    definitions: List[Optional[Dict[str, Any]]] = []
+    for element_test in _element_tests(expectations).values():
+        if not isinstance(element_test, dict):
+            continue
+        definitions.append(element_test.get("asserts"))
+        definitions.extend(_collection_assertion_definitions(element_test))
+    return definitions
 
 
 def _check_test_assertions(
