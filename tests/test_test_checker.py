@@ -6,6 +6,7 @@ from planemo.runnable import (
     cases,
     for_path,
     SuccessfulRunResponse,
+    TestCase,
 )
 from .test_utils import TEST_DATA_DIR
 
@@ -55,6 +56,37 @@ def test_file_case_checker():
     assert sd["data"]["status"] == "failure"
 
 
+def test_class_only_collection_case_checker():
+    """A ``class: Collection`` expectation without element tests is checked as a collection.
+
+    Before, ``TestCase._check_output`` sent it down the file branch, which failed with
+    "No path specified for expected output file" whatever the collection held.
+    """
+    workflow_path = os.path.join(TEST_DATA_DIR, "wf_repos", "basic_format2_ok_collection", "basic_format2.gxwf.yml")
+    test_case = TestCase(
+        runnable=for_path(workflow_path),
+        tests_directory=os.path.dirname(workflow_path),
+        output_expectations={"the_output": {"class": "Collection", "collection_type": "list", "element_count": 2}},
+        job_path=None,
+        job={},
+        index=0,
+        doc=None,
+    )
+
+    def collection(n):
+        elements = [{"element_identifier": f"e{i}", "element_type": "hda"} for i in range(n)]
+        return {"the_output": {"collection_type": "list", "elements": elements}}
+
+    sd = test_case.structured_test_data(MockRunResponse(collection(2)))
+    assert sd["data"]["status"] == "success"
+
+    sd = test_case.structured_test_data(MockRunResponse(collection(1)))
+    assert sd["data"]["status"] == "failure"
+    assert sd["data"]["output_problems"] == [
+        "Output collection 'the_output': expected to have 2 elements, but it had 1."
+    ]
+
+
 class MockRunResponse(SuccessfulRunResponse):
     start_datetime = None
     end_datetime = None
@@ -82,4 +114,5 @@ class MockRunResponse(SuccessfulRunResponse):
 __all__ = (
     "test_non_file_case_checker",
     "test_file_case_checker",
+    "test_class_only_collection_case_checker",
 )
